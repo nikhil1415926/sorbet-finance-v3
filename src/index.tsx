@@ -61,7 +61,6 @@ function Gelato({ children }: { children?: React.ReactNode }) {
       chainId={chainId}
       account={account ?? undefined}
       toggleWalletModal={toggleWalletModal}
-      handler={'spiritswap'}
     >
       {children}
     </GelatoProvider>
