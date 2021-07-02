@@ -54,6 +54,22 @@ const HeaderControls = styled.div`
   align-items: center;
   justify-self: flex-end;
 
+  ${({ theme }) => theme.mediaWidth.upToLarge`
+    flex-direction: row;
+    justify-content: space-between;
+    justify-self: center;
+    width: 100%;
+    padding: 1rem;
+    position: fixed;
+    bottom: 0px;
+    left: 0px;
+    width: 100%;
+    z-index: 99;
+    height: 72px;
+    border-radius: 12px 12px 0 0;
+    background-color: ${({ theme }) => theme.bg1};
+`};
+
   ${({ theme }) => theme.mediaWidth.upToMedium`
     flex-direction: row;
     justify-content: space-between;
@@ -69,7 +85,7 @@ const HeaderControls = styled.div`
     height: 72px;
     border-radius: 12px 12px 0 0;
     background-color: ${({ theme }) => theme.bg1};
-  `};
+`};
 `
 
 const HeaderElement = styled.div`
@@ -288,6 +304,7 @@ export const StyledMenuButton = styled.button`
 `
 
 const NETWORK_LABELS: { [chainId: number]: string } = {
+  [1]: 'Ethereum',
   [4]: 'Rinkeby',
   [3]: 'Ropsten',
   [5]: 'Görli',
