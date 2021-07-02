@@ -16,6 +16,7 @@ import ThemeProvider, { FixedGlobalStyle, ThemedGlobalStyle } from './theme'
 import getLibrary from './utils/getLibrary'
 import { GelatoProvider } from '@gelatonetwork/limit-orders-react'
 import { useActiveWeb3React } from 'hooks/web3'
+import { useWalletModalToggle } from 'state/application/hooks'
 
 const Web3ProviderNetwork = createWeb3ReactRoot(NetworkContextName)
 
@@ -53,8 +54,15 @@ function Updaters() {
 
 function Gelato({ children }: { children?: React.ReactNode }) {
   const { library, chainId, account } = useActiveWeb3React()
+  const toggleWalletModal = useWalletModalToggle()
   return (
-    <GelatoProvider library={library} chainId={chainId} account={account ?? undefined}>
+    <GelatoProvider
+      library={library}
+      chainId={chainId}
+      account={account ?? undefined}
+      toggleWalletModal={toggleWalletModal}
+      handler={'spiritswap'}
+    >
       {children}
     </GelatoProvider>
   )
