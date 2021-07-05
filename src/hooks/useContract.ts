@@ -10,12 +10,22 @@ import ERC20_BYTES32_ABI from 'abis/erc20_bytes32.json'
 import MULTICALL_ABI from 'abis/multicall2.json'
 import WETH_ABI from 'abis/weth.json'
 import EIP_2612 from 'abis/eip_2612.json'
+import IGUniPoolABI from 'abis/guni-pool.json';
+import IGUniFactoryABI from 'abis/guni-factory.json';
+import IUniswapV3PoolABI from 'abis/uniswap-v3-pool.json';
+import IQuoterV2ABI from 'abis/quoter-v2.json';
+import IGUniResolverABI from 'abis/guni-resolver.json';
+import IGUniRouterABI from 'abis/guni-router.json';
 import { abi as IUniswapV2PairABI } from '@uniswap/v2-core/build/IUniswapV2Pair.json'
 import {
   ARGENT_WALLET_DETECTOR_ADDRESS,
   MULTICALL2_ADDRESSES,
   V2_ROUTER_ADDRESS,
   ENS_REGISTRAR_ADDRESSES,
+  GUNI_FACTORY_ADDRESSES,
+  GUNI_RESOLVER_ADDRESSES,
+  GUNI_ROUTER_ADDRESSES,
+  V3_QUOTER_ADDRESSES
 } from 'constants/addresses'
 import { useMemo } from 'react'
 import { getContract } from 'utils'
@@ -78,8 +88,32 @@ export function usePairContract(pairAddress?: string, withSignerIfPossible?: boo
   return useContract(pairAddress, IUniswapV2PairABI, withSignerIfPossible)
 }
 
+export function useUniswapV3PoolContract(poolAddress?: string, withSignerIfPossible?: boolean): Contract | null {
+  return useContract(poolAddress, IUniswapV3PoolABI, withSignerIfPossible)
+}
+
+export function useGUniPoolContract(poolAddress?: string, withSignerIfPossible?: boolean): Contract | null {
+  return useContract(poolAddress, IGUniPoolABI, withSignerIfPossible)
+}
+
 export function useV2RouterContract(): Contract | null {
   return useContract(V2_ROUTER_ADDRESS, IUniswapV2Router02ABI, true)
+}
+
+export function useGUniFactoryContract(): Contract | null {
+  return useContract(GUNI_FACTORY_ADDRESSES, IGUniFactoryABI, true)
+}
+
+export function useGUniResolverContract(): Contract | null {
+  return useContract(GUNI_RESOLVER_ADDRESSES, IGUniResolverABI, true)
+}
+
+export function useGUniRouterContract(): Contract | null {
+  return useContract(GUNI_ROUTER_ADDRESSES, IGUniRouterABI, true)
+}
+
+export function useUniswapV3Quoter(): Contract | null {
+  return useContract(V3_QUOTER_ADDRESSES, IQuoterV2ABI, true);
 }
 
 export function useMulticall2Contract() {

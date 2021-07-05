@@ -19,9 +19,9 @@ import { Lock } from 'react-feather'
 import { AutoColumn } from 'components/Column'
 import { FiatValue } from './FiatValue'
 import { formatTokenAmount } from 'utils/formatTokenAmount'
-import { MouseoverTooltip } from 'components/Tooltip'
-import HoverInlineText from 'components/HoverInlineText'
-import { formatUnits } from 'ethers/lib/utils'
+//import { MouseoverTooltip } from 'components/Tooltip'
+//import HoverInlineText from 'components/HoverInlineText'
+//import { formatUnits } from 'ethers/lib/utils'
 
 const InputPanel = styled.div<{ hideInput?: boolean }>`
   ${({ theme }) => theme.flexColumnNoWrap}
