@@ -113,9 +113,9 @@ function PoolDetails(props: PoolParams) {
             {` ${formatBigNumber(poolDetails.supply0, poolDetails.decimals0, 2)} ${poolDetails.symbol0} and ${formatBigNumber(poolDetails.supply1, poolDetails.decimals1, 2)} ${poolDetails.symbol1} `}
             &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
             <strong>Supply:</strong>
-            {` ${formatBigNumber(poolDetails.supply, poolDetails.decimals, 4)} G-UNI`}
+            {` ${formatBigNumber(poolDetails.supply, poolDetails.decimals, 4)} ${poolDetails.symbol}`}
           </p>
-          {poolDetails.balancePool.gt(0) ? <p><strong>Your Share:</strong>{` ${formatBigNumber(poolDetails.balancePool, poolDetails.decimals, 4)} G-UNI`}</p>:<></>}
+          {poolDetails.balancePool.gt(0) ? <p><strong>Your Share:</strong>{` ${formatBigNumber(poolDetails.balancePool, poolDetails.decimals, 4)} ${poolDetails.symbol}`}</p>:<></>}
           {poolDetails.balancePool.gt(0) ? <p><strong>Your Share Value:</strong>{` ${formatBigNumber(poolDetails.share0, poolDetails.decimals0, 2)} ${poolDetails.symbol0} and ${formatBigNumber(poolDetails.share1, poolDetails.decimals1, 2)} ${poolDetails.symbol1}`}</p>:<></>}
           <p>
             <a href={`/#/pools/add/${guniPool.address}`}>Add Liquidity</a>

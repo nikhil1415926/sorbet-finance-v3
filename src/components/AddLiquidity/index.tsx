@@ -2,7 +2,8 @@ import React, {useEffect, useState} from 'react';
 import styled from "styled-components";
 import {useParams} from "react-router-dom";
 import {PoolDetails, PoolParams, PoolTokens, fetchPoolDetails, formatBigNumber} from '../../components/PoolInfo';
-import CurrencyInputPanel from '../../components/CurrencyInputPanel';
+import CurrencyInputPanel from 'components/CurrencyInputPanel'
+import {ButtonPink} from 'components/Button'
 import {
   useTokenContract,
   useGUniPoolContract,
@@ -13,24 +14,46 @@ import {
 import {useToken} from 'hooks/Tokens';
 import { Currency, WETH9, Ether } from '@uniswap/sdk-core';
 import { useActiveWeb3React } from 'hooks/web3';
-//import { useTranslation } from 'react-i18next'
 import { Contract } from '@ethersproject/contracts'
-import { BigNumber } from '@ethersproject/bignumber'
 //import useUSDCPrice from 'hooks/useUSDCPrice'
-import { ReactComponent as Plus } from '../../assets/images/plus-blue.svg'
-//import {ethers} from 'ethers';
-import './css.css';
+//import { useTranslation } from 'react-i18next'
+import { ReactComponent as Plus } from 'assets/images/plus-blue.svg';
+import './toggle.css';
 import { ethers } from 'ethers';
 
-const Area = styled.div`
+export const Area = styled.div`
   width: 40%;
 `;
 
-const DownArrowBackground = styled.div`
+export const Button = styled(ButtonPink)`
+  width: 25%;
+`;
+
+export const ButtonLong = styled(ButtonPink)`
+  width: 50%;
+`;
+
+export const MarginLeft = styled.p`
+  margin-left: 25%;
+`;
+
+export const Popover = styled.div`
+  width: 50%;
+  background-color: black;
+  border: 2px solid #77aaff;
+	box-shadow: -5px 5px #77aaff;
+  color: white;
+  z-index: 11;
+
+`
+
+export const CenteredFlex = styled.div`
+  display: flex;
   flex-direction: row;
   flex-wrap: no-wrap;
   justify-content: center;
   align-items: center;
+  text-align: center;
 `
 
 const WrappedPlus = ({ ...rest }) => <Plus {...rest} />
@@ -44,7 +67,7 @@ const ColoredWrappedPlus = styled(WrappedPlus)`
   }
 `
 
-const MAX_UINT = ethers.BigNumber.from("115792089237316195423570985008687907853269984665640564039457584007913129639935");
+export const MAX_UINT = ethers.BigNumber.from("115792089237316195423570985008687907853269984665640564039457584007913129639935");
 
 function AddLiquidityPanel(props: PoolParams) {
   const [poolDetails, setPoolDetails] = useState<PoolDetails|null>();
@@ -60,7 +83,7 @@ function AddLiquidityPanel(props: PoolParams) {
   const [eth, setEth] = useState<Currency>();
   const [expected0, setExpected0] = useState<string|null>();
   const [expected1, setExpected1] = useState<string|null>();
-  const [expectedMint, setExpectedMint] = useState<BigNumber|null>();
+  const [expectedMint, setExpectedMint] = useState<string|null>();
   const [showModal, setShowModal] = useState<boolean>(false);
   const [depositProtocol, setDepositProtocol] = useState<string|null>();
   const [depositParams, setDepositParams] = useState<any|null>();
@@ -75,16 +98,23 @@ function AddLiquidityPanel(props: PoolParams) {
   const quoter = useUniswapV3Quoter();
   const guniRouter = useGUniRouterContract();
   const handleChangeInput0 = (e: any) => {
+    setShowModal(false);
     setInput0(e);
   }
   const handleChangeInput1 = (e: any) => {
+    setShowModal(false);
     setInput1(e);
   }
   const handleRebalanceCheckbox = () => {
+    setShowModal(false);
     setSwapAssets(!swapAssets);
   }
   const handleEthCheckbox = () => {
+    setShowModal(false);
     setUseEth(!useEth);
+  }
+  const handleCancel = () => {
+    setShowModal(false);
   }
   const handleApprove0 = async () => {
     setWaitMessage(null);
@@ -107,26 +137,52 @@ function AddLiquidityPanel(props: PoolParams) {
     }
   }
   const handleDeposit = async () => {
-    console.log("EEE");
-    return;
+    setWaitMessage(null);
+    if (guniRouter && poolDetails && depositParams) {
+      let tx;
+      if (depositProtocol == 'addLiquidity') {
+        tx = await guniRouter.addLiquidity(...depositParams);
+      } else if (depositProtocol == 'addLiquidityETH') {
+        tx = await guniRouter.addLiquidityETH(...depositParams, {value: is0Weth ? depositParams[1]:depositParams[2]});
+      } else if (depositProtocol == 'rebalanceAndAddLiquidity') {
+        tx = await guniRouter.rebalanceAndAddLiquidity(...depositParams);
+      } else if (depositProtocol == 'rebalanceAndAddLiquidityETH') {
+        tx = await guniRouter.rebalanceAndAddLiquidityETH(...depositParams, {value: is0Weth ? depositParams[1]:depositParams[2]});
+      } else {
+        return;
+      }
+      setWaitMessage(`Minting...`);
+      await tx.wait();
+      setWaitMessage(null);
+      await reset();
+    }
   }
   const handleTryInputs = async () => {
-    if (poolDetails && account && guniPool && guniResolver && quoter && token0 && token1 && guniRouter) {
-      setInputError('');
+    if (account && guniPool && guniResolver && quoter && token0 && token1 && guniRouter) {
+      setInputError(null);
+      setShowModal(false);
+      setIsApproved0(false);
+      setIsApproved1(false);
+      const details = await fetchPoolDetails(guniPool, token0, token1, account);
+      setPoolDetails(details);
+      if (!details) {
+        setInputError('Failed to fetch pool data');
+        return;
+      }
       try {
-        const in0 = input0 ? ethers.utils.parseUnits(input0, poolDetails.decimals0.toString()) : ethers.constants.Zero;
-        const in1 = input1 ? ethers.utils.parseUnits(input1, poolDetails.decimals1.toString()) : ethers.constants.Zero;
-        if (in0.gt(poolDetails.balance0) && (!useEth || !is0Weth)){
-          setInputError(`Insufficient balance of ${poolDetails.symbol0}`);
+        const in0 = input0 ? ethers.utils.parseUnits(input0, details.decimals0.toString()) : ethers.constants.Zero;
+        const in1 = input1 ? ethers.utils.parseUnits(input1, details.decimals1.toString()) : ethers.constants.Zero;
+        if (in0.gt(details.balance0) && (!useEth || !is0Weth)){
+          setInputError(`Insufficient balance of ${details.symbol0}`);
           return;
-        } else if (useEth && is0Weth && in0.gt(poolDetails.balanceEth)) {
+        } else if (useEth && is0Weth && in0.gt(details.balanceEth)) {
           setInputError(`Insufficient balance of ETH`);
           return;
         }
-        if (in1.gt(poolDetails.balance1) && (!useEth || !is1Weth)) {
-          setInputError(`Insufficient balance of ${poolDetails.symbol1}`);
+        if (in1.gt(details.balance1) && (!useEth || !is1Weth)) {
+          setInputError(`Insufficient balance of ${details.symbol1}`);
           return;
-        } else if (useEth && is0Weth && in1.gt(poolDetails.balanceEth)) {
+        } else if (useEth && is0Weth && in1.gt(details.balanceEth)) {
           setInputError(`Insufficient balance of ETH`);
           return;
         }
@@ -134,12 +190,12 @@ function AddLiquidityPanel(props: PoolParams) {
           setInputError(`Must provide non-zero amount of assets`)
           return;
         }
-        if (!swapAssets && poolDetails.supply0.gt(0) && in0.eq(ethers.constants.Zero)) {
-          setInputError(`Allow rebalance or provide non-zero value of ${poolDetails.symbol0}`);
+        if (!swapAssets && details.supply0.gt(0) && in0.eq(ethers.constants.Zero)) {
+          setInputError(`Allow rebalance or provide non-zero value of ${details.symbol0}`);
           return;
         }
-        if (!swapAssets && poolDetails.supply1.gt(0) && in1.eq(ethers.constants.Zero)) {
-          setInputError(`Allow rebalance or provide non-zero value of ${poolDetails.symbol1}`);
+        if (!swapAssets && details.supply1.gt(0) && in1.eq(ethers.constants.Zero)) {
+          setInputError(`Allow rebalance or provide non-zero value of ${details.symbol1}`);
           return;
         }
         if ((await token0.allowance(account, guniRouter.address)).gte(in0) || (is0Weth && useEth)) {
@@ -150,19 +206,20 @@ function AddLiquidityPanel(props: PoolParams) {
         }
         if (!swapAssets) {
           const res = await guniPool.getMintAmounts(in0, in1);
-          setExpected0(formatBigNumber(res[0], poolDetails.decimals0));
-          setExpected1(formatBigNumber(res[1], poolDetails.decimals1));
-          setExpectedMint(res[2]);
-          setShowModal(true);
-          setDepositProtocol(useEth ? 'addLiquidityETH': 'addLiquidity');
+          setExpected0(formatBigNumber(res[0], details.decimals0));
+          setExpected1(formatBigNumber(res[1], details.decimals1));
+          setExpectedMint(formatBigNumber(res[2], details.decimals));
+          setDepositProtocol(useEth && (is0Weth || is1Weth) ? 'addLiquidityETH': 'addLiquidity');
           setDepositParams([guniPool.address, in0, in1, 0, 0, account]);
+          setShowModal(true);
         } else {
           const res = await guniResolver.getRebalanceParams(guniPool.address, in0, in1, 200);
           const [zeroForOne, swapAmount, swapThreshold] = res;
           if (swapAmount.gt(0)) {
             const pool = new ethers.Contract(await guniPool.pool(), ["function fee() external view returns (uint24)"], guniPool.provider);
             const fee = await pool.fee();
-            const amountOut = await quoter.callStatic.quoteExactInputSingle(props.token0, props.token1, fee, swapAmount, swapThreshold);
+            const path = zeroForOne ? [props.token0, props.token1] : [props.token1, props.token0];
+            const amountOut = await quoter.callStatic.quoteExactInputSingle(path[0], path[1], fee, swapAmount, swapThreshold);
             let new0;
             let new1;
             if (zeroForOne) {
@@ -173,20 +230,20 @@ function AddLiquidityPanel(props: PoolParams) {
               new0 = in0.add(amountOut);
             }
             const res2 = await guniPool.getMintAmounts(new0, new1);
-            setExpected0(formatBigNumber(res2[0], poolDetails.decimals0));
-            setExpected1(formatBigNumber(res2[1], poolDetails.decimals1));
-            setExpectedMint(res2[2]);
-            setShowModal(true);
-            setDepositProtocol(useEth ? 'rebalanceAndAddLiquidityETH': 'rebalanceAndAddLiquidity');
+            setExpected0(formatBigNumber(res2[0], details.decimals0));
+            setExpected1(formatBigNumber(res2[1], details.decimals1));
+            setExpectedMint(formatBigNumber(res2[2], details.decimals));
+            setDepositProtocol(useEth && (is0Weth || is1Weth) ? 'rebalanceAndAddLiquidityETH': 'rebalanceAndAddLiquidity');
             setDepositParams([guniPool.address, in0, in1, zeroForOne, swapAmount, swapThreshold, 0, 0, account]);
+            setShowModal(true);
           } else {
             const res2 = await guniPool.getMintAmounts(in0, in1);
-            setExpected0(formatBigNumber(res2[0], poolDetails.decimals0));
-            setExpected1(formatBigNumber(res2[1], poolDetails.decimals1));
-            setExpectedMint(res2[2]);
-            setShowModal(true);
-            setDepositProtocol(useEth ? 'addLiquidityETH': 'addLiquidity');
+            setExpected0(formatBigNumber(res2[0], details.decimals0));
+            setExpected1(formatBigNumber(res2[1], details.decimals1));
+            setExpectedMint(formatBigNumber(res2[2], details.decimals));
+            setDepositProtocol(useEth && (is0Weth || is1Weth) ? 'addLiquidityETH': 'addLiquidity');
             setDepositParams([guniPool.address, in0, in1, 0, 0, account]);
+            setShowModal(true);
           }
         }
       } catch(e) {
@@ -195,6 +252,7 @@ function AddLiquidityPanel(props: PoolParams) {
       }
     }
   }
+
   useEffect(() => {
     const getPool = async () => {
       if (guniPool && token0 && token1) {
@@ -212,101 +270,139 @@ function AddLiquidityPanel(props: PoolParams) {
     }
     getPool();
   }, [guniPool, token0, token1, account, chainId]);
+
+  const reset = async () => {
+    setInputError(null);
+    setWaitMessage(null);
+    setIsApproved0(false);
+    setIsApproved1(false);
+    setShowModal(false);
+    setSwapAssets(true);
+    setUseEth(true);
+    setInput0(null);
+    setInput1(null);
+    setExpected0(null);
+    setExpected1(null);
+    setExpectedMint(null);
+    setDepositProtocol(null);
+    setDepositParams(null);
+    if (guniPool && token0 && token1) {
+      const details = await fetchPoolDetails(guniPool, token0, token1, account);
+      setPoolDetails(details);
+    }
+  }
   return (
     <>
       {poolDetails ?
         <>
           <h2>{poolDetails.name}</h2>
-          <p>
-            <strong>TVL:</strong>
-            {` ${formatBigNumber(poolDetails.supply0, poolDetails.decimals0, 2)} ${poolDetails.symbol0} and ${formatBigNumber(poolDetails.supply1, poolDetails.decimals1, 2)} ${poolDetails.symbol1} `}
-            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-            <strong>Supply:</strong>
-            {` ${formatBigNumber(poolDetails.supply, poolDetails.decimals, 4)} G-UNI`}
-          </p>
-          <h3>Add Liquidity:</h3>
-          <Area>
-            {(is0Weth && useEth) ?
-                <CurrencyInputPanel
-                value={input0 ? input0 : ""}
-                onUserInput={(e: string) => handleChangeInput0(e)}
-                showCurrencySelector={true}
-                showMaxButton={false}
-                hideBalance={true}
-                currency={eth}
-                id={'input0Eth'}
-              />
-            :
-              <CurrencyInputPanel
-                value={input0 ? input0 : ""}
-                onUserInput={(e: string) => handleChangeInput0(e)}
-                showCurrencySelector={true}
-                showMaxButton={false}
-                hideBalance={true}
-                currency={currency0}
-                id={'input0'}
-              />
-            }
-          </Area>
-          <DownArrowBackground>
-            <ColoredWrappedPlus active={account} alt="plus" />
-          </DownArrowBackground>
-          <Area>
-            {(is1Weth && useEth) ?
-              <CurrencyInputPanel
-                value={input1 ? input1 : ""}
-                onUserInput={(e: string) => handleChangeInput1(e)}
-                showCurrencySelector={true}
-                showMaxButton={false}
-                hideBalance={true}
-                currency={eth}
-                id={'input1Eth'}
-              />
-            :
-              <CurrencyInputPanel
-                value={input1 ? input1 : ""}
-                onUserInput={(e: string) => handleChangeInput1(e)}
-                showCurrencySelector={true}
-                showMaxButton={false}
-                hideBalance={true}
-                currency={currency1}
-                id={'input1'}
-              />
-            }
-          </Area>
-          <br></br>
-          <Area>
-            Rebalance my assets (swap) before deposit?
-            <br></br>
-            <label className="switch">
-              <input type="checkbox" onClick={() => handleRebalanceCheckbox()}/>
-              <div><br></br>{swapAssets ? 'yes':'no'}</div>
-            </label>
-            {(is0Weth || is1Weth) ?
-              <>
-                Use WETH or ETH?
-                <br></br>
-                <label className="switch">
-                  <input type="checkbox" onClick={() => handleEthCheckbox()}/>
-                  <div><br></br>{useEth ? 'ETH':'WETH'}</div>
-                </label>
-              </>
-            :
-              <></>
-            }
-          </Area>
-          {inputError ? <p style={{color: 'red'}}>{inputError}</p> : <p>&nbsp;</p>}
-          {!showModal ? <button onClick={() => handleTryInputs()}>Add Liquidity</button> : <></>}
-          {showModal ? 
-            <>
+          {!showModal ?
+          <>
             <p>
-              {expected0}<br></br>
-              {expected1}<br></br>
-              {expectedMint ? formatBigNumber(expectedMint, poolDetails.decimals) : "-"}
+              <strong>TVL:</strong>
+              {` ${formatBigNumber(poolDetails.supply0, poolDetails.decimals0, 2)} ${poolDetails.symbol0} + ${formatBigNumber(poolDetails.supply1, poolDetails.decimals1, 2)} ${poolDetails.symbol1} `}
+              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+              <strong>Supply:</strong>
+              {` ${formatBigNumber(poolDetails.supply, poolDetails.decimals, 4)} ${poolDetails.symbol}`}
             </p>
-            {isApproved0 && isApproved1 ? <button onClick={() => handleDeposit()}>Add Liquidity</button> : isApproved0 ? <button onClick={() => handleApprove1()}>{`Approve ${poolDetails.symbol1}`}</button> : <button onClick={() => handleApprove0()}>{`Approve ${poolDetails.symbol0}`}</button>}
-            {waitMessage ? <p>{waitMessage}</p>: <></>}
-            </>
+            <p>
+              <strong>Your Position:</strong>{` ${formatBigNumber(poolDetails.balancePool, poolDetails.decimals, 4)} ${poolDetails.symbol}`}&nbsp;&nbsp;&nbsp;{`(${formatBigNumber(poolDetails.share0, poolDetails.decimals0, 2)} ${poolDetails.symbol0} + ${formatBigNumber(poolDetails.share1, poolDetails.decimals1, 2)} ${poolDetails.symbol1})`}
+            </p>
+            <Area>
+              {(is0Weth && useEth) ?
+                  <CurrencyInputPanel
+                  value={input0 ? input0 : ""}
+                  onUserInput={(e: string) => handleChangeInput0(e)}
+                  showCurrencySelector={true}
+                  showMaxButton={false}
+                  hideBalance={true}
+                  currency={eth}
+                  id={'input0Eth'}
+                />
+              :
+                <CurrencyInputPanel
+                  value={input0 ? input0 : ""}
+                  onUserInput={(e: string) => handleChangeInput0(e)}
+                  showCurrencySelector={true}
+                  showMaxButton={false}
+                  hideBalance={true}
+                  currency={currency0}
+                  id={'input0'}
+                />
+              }
+            </Area>
+            <CenteredFlex>
+              <ColoredWrappedPlus active={account} alt="plus" />
+            </CenteredFlex>
+            <Area>
+              {(is1Weth && useEth) ?
+                <CurrencyInputPanel
+                  value={input1 ? input1 : ""}
+                  onUserInput={(e: string) => handleChangeInput1(e)}
+                  showCurrencySelector={true}
+                  showMaxButton={false}
+                  hideBalance={true}
+                  currency={eth}
+                  id={'input1Eth'}
+                />
+              :
+                <CurrencyInputPanel
+                  value={input1 ? input1 : ""}
+                  onUserInput={(e: string) => handleChangeInput1(e)}
+                  showCurrencySelector={true}
+                  showMaxButton={false}
+                  hideBalance={true}
+                  currency={currency1}
+                  id={'input1'}
+                />
+              }
+            </Area>
+            <br></br>
+            <Area>
+              Rebalance my assets (swap) before deposit?
+              <br></br>
+              <label className="switch">
+                <input type="checkbox" onClick={() => handleRebalanceCheckbox()}/>
+                <div><br></br>{swapAssets ? 'yes':'no'}</div>
+              </label>
+              {(is0Weth || is1Weth) ?
+                <>
+                  Use WETH or ETH?
+                  <br></br>
+                  <label className="switch">
+                    <input type="checkbox" onClick={() => handleEthCheckbox()}/>
+                    <div><br></br>{useEth ? 'ETH':'WETH'}</div>
+                  </label>
+                </>
+              :
+                <></>
+              }
+            </Area>
+            <Button onClick={() => handleTryInputs()}>Add Liquidity</Button>
+            {inputError ? <p style={{color: 'red'}}>{inputError}</p> : <></>}
+          </>
+          : 
+            <></>
+          }
+          {showModal ? 
+            <Popover>
+              <MarginLeft>
+                <h3>Add Liquidity</h3>
+                {`Max Input: ${input0 ? Number(input0).toFixed(3) : '0'} ${poolDetails.symbol0}, ${input1 ? Number(input1).toFixed(3) : '0'} ${poolDetails.symbol1}`}<br></br>
+                Swap: {(swapAssets && depositParams) ? depositParams[3] ? `${formatBigNumber(depositParams[4], poolDetails.decimals0, 3)} ${poolDetails.symbol0}`: `${formatBigNumber(depositParams[4], poolDetails.decimals1, 3)} ${poolDetails.symbol1}`: 'no swap'}<br></br>
+                {`Expected Deposit: ${expected0} ${poolDetails.symbol0}, ${expected1} ${poolDetails.symbol1}`}<br></br>
+                {`Expected Mint: ${expectedMint} ${poolDetails.symbol} (${(100 * Number(expectedMint) / (Number(formatBigNumber(poolDetails.supply, poolDetails.decimals, 8))+Number(expectedMint))).toFixed(3)}% of supply)`}
+              </MarginLeft>
+              {waitMessage ? <CenteredFlex>({waitMessage})</CenteredFlex>: <CenteredFlex>&nbsp;</CenteredFlex>}
+              <CenteredFlex>
+                {isApproved0 && isApproved1 ? <ButtonLong onClick={() => handleDeposit()}>Submit Transaction</ButtonLong> : isApproved0 ? <ButtonLong onClick={() => handleApprove1()}>{`Approve ${poolDetails.symbol1}`}</ButtonLong> : <ButtonLong onClick={() => handleApprove0()}>{`Approve ${poolDetails.symbol0}`}</ButtonLong>}
+              </CenteredFlex>
+              <br></br>
+              <CenteredFlex>
+                <ButtonLong onClick={() => handleCancel()}>Cancel</ButtonLong>
+              </CenteredFlex>
+              <br></br>
+            </Popover>
           :
             <></>
           }

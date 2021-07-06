@@ -24,7 +24,7 @@ export default function ListPools() {
   }, [guniFactory]);
   return (
     <>
-      <p>G-UNI</p>
+      <p>Gelato Uniswap V3 Pools</p>
       {pools.length > 0 ?
         <ul>
             {pools.map(function(pool, index){
