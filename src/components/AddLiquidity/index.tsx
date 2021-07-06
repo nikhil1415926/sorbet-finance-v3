@@ -380,6 +380,9 @@ function AddLiquidityPanel(props: PoolParams) {
             </Area>
             <Button onClick={() => handleTryInputs()}>Add Liquidity</Button>
             {inputError ? <p style={{color: 'red'}}>{inputError}</p> : <></>}
+            <br></br><br></br>
+            <a href={`/#/pools/remove/${props.pool.address}`}>remove liquidity</a>
+            <a href={'/#/pools'}>all pools</a>
           </>
           : 
             <></>

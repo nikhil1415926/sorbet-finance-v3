@@ -180,6 +180,10 @@ function RemoveLiquidityPanel(props: PoolParams) {
             </Area>
             <Button onClick={() => handleTryInput()}>Remove Liquidity</Button>
             {inputError ? <p style={{color: 'red'}}>{inputError}</p> : <></>}
+            <br></br>
+            <br></br>
+            <a href={`/#/pools/add/${props.pool.address}`}>add liquidity</a>
+            <a href={'/#/pools'}>all pools</a>
           </>
           : 
             <></>
@@ -188,7 +192,7 @@ function RemoveLiquidityPanel(props: PoolParams) {
             <Popover>
               <MarginLeft>
                 <h3>Remove Liquidity</h3>
-                {`Burn: ${Number(inputBurn).toFixed(5)} ${poolDetails.symbol} (${(100 * Number(inputBurn) / (Number(formatBigNumber(poolDetails.supply, poolDetails.decimals, 8))+Number(inputBurn))).toFixed(3)}% of supply)`}
+                {`Burn: ${Number(inputBurn).toFixed(5)} ${poolDetails.symbol} (${(100 * Number(inputBurn) / (Number(formatBigNumber(poolDetails.supply, poolDetails.decimals, 8)))).toFixed(3)}% of supply)`}
                 <br></br>
                 {`Expected Return: ${expected0} ${poolDetails.symbol0}, ${expected1} ${poolDetails.symbol1}`}<br></br>
               </MarginLeft>
