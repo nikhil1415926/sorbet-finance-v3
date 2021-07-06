@@ -11,8 +11,8 @@ import {
   useGUniRouterContract,
   useUniswapV3Quoter
 } from 'hooks/useContract';
-import {useToken} from 'hooks/Tokens';
-import { Currency, WETH9, Ether } from '@uniswap/sdk-core';
+import {useToken} from 'hooks/Tokens'
+import { Currency, Token, WETH9, Ether } from '@uniswap/sdk-core';
 import { useActiveWeb3React } from 'hooks/web3';
 import { Contract } from '@ethersproject/contracts'
 //import useUSDCPrice from 'hooks/useUSDCPrice'
@@ -313,9 +313,10 @@ function AddLiquidityPanel(props: PoolParams) {
                   <CurrencyInputPanel
                   value={input0 ? input0 : ""}
                   onUserInput={(e: string) => handleChangeInput0(e)}
+                  onMax={() => setInput0(formatBigNumber(poolDetails.balanceEth, 18, 18))}
                   showCurrencySelector={true}
-                  showMaxButton={false}
-                  hideBalance={true}
+                  showMaxButton={true}
+                  hideBalance={false}
                   currency={eth}
                   id={'input0Eth'}
                 />
@@ -323,9 +324,10 @@ function AddLiquidityPanel(props: PoolParams) {
                 <CurrencyInputPanel
                   value={input0 ? input0 : ""}
                   onUserInput={(e: string) => handleChangeInput0(e)}
+                  onMax={() => setInput0(formatBigNumber(poolDetails.balance0, poolDetails.decimals0, poolDetails.decimals0))}
                   showCurrencySelector={true}
-                  showMaxButton={false}
-                  hideBalance={true}
+                  showMaxButton={true}
+                  hideBalance={false}
                   currency={currency0}
                   id={'input0'}
                 />
@@ -339,9 +341,10 @@ function AddLiquidityPanel(props: PoolParams) {
                 <CurrencyInputPanel
                   value={input1 ? input1 : ""}
                   onUserInput={(e: string) => handleChangeInput1(e)}
+                  onMax={() => setInput1(formatBigNumber(poolDetails.balanceEth, 18, 18))}
                   showCurrencySelector={true}
-                  showMaxButton={false}
-                  hideBalance={true}
+                  showMaxButton={true}
+                  hideBalance={false}
                   currency={eth}
                   id={'input1Eth'}
                 />
@@ -349,9 +352,10 @@ function AddLiquidityPanel(props: PoolParams) {
                 <CurrencyInputPanel
                   value={input1 ? input1 : ""}
                   onUserInput={(e: string) => handleChangeInput1(e)}
+                  onMax={() => setInput1(formatBigNumber(poolDetails.balance1, poolDetails.decimals1, poolDetails.decimals1))}
                   showCurrencySelector={true}
-                  showMaxButton={false}
-                  hideBalance={true}
+                  showMaxButton={true}
+                  hideBalance={false}
                   currency={currency1}
                   id={'input1'}
                 />

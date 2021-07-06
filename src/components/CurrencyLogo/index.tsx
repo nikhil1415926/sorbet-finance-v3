@@ -61,7 +61,14 @@ export default function CurrencyLogo({
     }
     return []
   }, [currency, uriLocations, chainId, activeTokenList])
-
+  if (currency?.symbol == "G-UNI") {
+    return (<StyledLogo
+      srcs={['https://i.ibb.co/sy9Dc1z/G-UNI-Logo.png']}
+      size={size}
+      style={style}
+      {...rest}
+    />)
+  }
   if (currency?.isNative) {
     return chainId !== 1 ? (
       <StyledLogo

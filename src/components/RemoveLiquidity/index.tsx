@@ -8,8 +8,7 @@ import {
   useGUniPoolContract,
   useGUniRouterContract
 } from 'hooks/useContract';
-import {useToken} from 'hooks/Tokens';
-import { WETH9 } from '@uniswap/sdk-core';
+import { Currency, Token, WETH9 } from '@uniswap/sdk-core';
 import { useActiveWeb3React } from 'hooks/web3';
 import { Contract } from '@ethersproject/contracts'
 //import useUSDCPrice from 'hooks/useUSDCPrice'
@@ -31,11 +30,11 @@ function RemoveLiquidityPanel(props: PoolParams) {
   const [showModal, setShowModal] = useState<boolean>(false);
   const [burnParams, setBurnParams] = useState<any|null>();
   const [waitMessage, setWaitMessage] = useState<string|null>();
+  const [currency, setCurrency] = useState<Currency>();
   const {chainId, account} = useActiveWeb3React();
   const guniPool = props.pool;
   const token0 = useTokenContract(props.token0);
   const token1 = useTokenContract(props.token1);
-  const guniCurrency = useToken(guniPool.address);
   const guniRouter = useGUniRouterContract();
   const handleChangeInput = (e: any) => {
     setShowModal(false);
@@ -109,6 +108,9 @@ function RemoveLiquidityPanel(props: PoolParams) {
       if (guniPool && token0 && token1) {
         const details = await fetchPoolDetails(guniPool, token0, token1, account);
         setPoolDetails(details);
+        if (details && chainId) {
+          setCurrency(new Token(chainId, guniPool.address, details.decimals, details.symbol, details.name));
+        }
       }
       if (chainId) {
         if (WETH9[chainId].address == token0?.address) {
@@ -156,10 +158,11 @@ function RemoveLiquidityPanel(props: PoolParams) {
                 <CurrencyInputPanel
                 value={inputBurn ? inputBurn : ""}
                 onUserInput={(e: string) => handleChangeInput(e)}
+                onMax={() => setInputBurn(formatBigNumber(poolDetails.balancePool, poolDetails.decimals, poolDetails.decimals))}
                 showCurrencySelector={true}
-                showMaxButton={false}
-                hideBalance={true}
-                currency={guniCurrency}
+                showMaxButton={true}
+                hideBalance={false}
+                currency={currency}
                 id={'input'}
               />
             </Area>
