@@ -3,7 +3,8 @@ import styled from "styled-components";
 import {useParams} from "react-router-dom";
 import {PoolDetails, PoolParams, PoolTokens, fetchPoolDetails, formatBigNumber} from '../../components/PoolInfo';
 import CurrencyInputPanel from 'components/CurrencyInputPanel'
-import {ButtonPink} from 'components/Button'
+import {ButtonGray, ButtonPink} from 'components/Button'
+import TransactionConfirmationModal from 'components/TransactionConfirmationModal'
 import {
   useTokenContract,
   useGUniPoolContract,
@@ -12,7 +13,7 @@ import {
   useUniswapV3Quoter
 } from 'hooks/useContract';
 import {useToken} from 'hooks/Tokens'
-import { Currency, Token, WETH9, Ether } from '@uniswap/sdk-core';
+import { Currency, WETH9, Ether } from '@uniswap/sdk-core';
 import { useActiveWeb3React } from 'hooks/web3';
 import { Contract } from '@ethersproject/contracts'
 //import useUSDCPrice from 'hooks/useUSDCPrice'
@@ -29,7 +30,8 @@ export const Button = styled(ButtonPink)`
   width: 25%;
 `;
 
-export const ButtonLong = styled(ButtonPink)`
+export const ButtonLong = styled(ButtonGray)`
+  background-color: #0645AD;
   width: 50%;
 `;
 
@@ -78,13 +80,17 @@ function AddLiquidityPanel(props: PoolParams) {
   const [is1Weth, setIs1Weth] = useState<boolean>(false);
   const [isApproved0, setIsApproved0] = useState<boolean>(false);
   const [isApproved1, setIsApproved1] = useState<boolean>(false);
+  const [isTransactionPending, setIsTransactionPending] = useState<boolean>(false);
+  const [showTransactionModal, setShowTransactionModal] = useState(false);
+  const [pendingTxHash, setPendingTxHash] = useState<string|null>();
   const [useEth, setUseEth] = useState<boolean>(true);
+  /* eslint-disable  @typescript-eslint/no-unused-vars */
   const [swapAssets, setSwapAssets] = useState<boolean>(true);
   const [eth, setEth] = useState<Currency>();
   const [expected0, setExpected0] = useState<string|null>();
   const [expected1, setExpected1] = useState<string|null>();
   const [expectedMint, setExpectedMint] = useState<string|null>();
-  const [showModal, setShowModal] = useState<boolean>(false);
+  const [showDetailsModal, setShowDetailsModal] = useState<boolean>(false);
   const [depositProtocol, setDepositProtocol] = useState<string|null>();
   const [depositParams, setDepositParams] = useState<any|null>();
   const [waitMessage, setWaitMessage] = useState<string|null>();
@@ -98,48 +104,59 @@ function AddLiquidityPanel(props: PoolParams) {
   const quoter = useUniswapV3Quoter();
   const guniRouter = useGUniRouterContract();
   const handleChangeInput0 = (e: any) => {
-    setShowModal(false);
+    setShowDetailsModal(false);
     setInput0(e);
   }
   const handleChangeInput1 = (e: any) => {
-    setShowModal(false);
+    setShowDetailsModal(false);
     setInput1(e);
   }
-  const handleRebalanceCheckbox = () => {
-    setShowModal(false);
+  /*const handleRebalanceCheckbox = () => {
+    setShowDetailsModal(false);
     setSwapAssets(!swapAssets);
-  }
+  }*/
   const handleEthCheckbox = () => {
-    setShowModal(false);
+    setShowDetailsModal(false);
     setUseEth(!useEth);
   }
   const handleCancel = () => {
-    setShowModal(false);
+    setShowDetailsModal(false);
   }
   const handleApprove0 = async () => {
     setWaitMessage(null);
+    setIsTransactionPending(false);
     if (token0 && guniRouter && poolDetails) {
+      setShowTransactionModal(true);
+      setWaitMessage(`Approve ${poolDetails.symbol0}`);
       const tx = await token0.approve(guniRouter.address, MAX_UINT);
-      setWaitMessage(`Approving ${poolDetails.symbol0}`);
+      setPendingTxHash(tx.hash);
+      setIsTransactionPending(true);
       await tx.wait();
-      setWaitMessage(null);
       setIsApproved0(true);
+      setIsTransactionPending(false);
     }
   }
   const handleApprove1 = async () => {
     setWaitMessage(null);
+    setIsTransactionPending(false);
     if (token1 && guniRouter && poolDetails) {
+      setShowTransactionModal(true);
+      setWaitMessage(`Approve ${poolDetails.symbol1}`);
       const tx = await token1.approve(guniRouter.address, MAX_UINT);
-      setWaitMessage(`Approving ${poolDetails.symbol1}`);
+      setPendingTxHash(tx.hash);
+      setIsTransactionPending(true);
       await tx.wait();
-      setWaitMessage(null);
-      setIsApproved0(true);
+      setIsApproved1(true);
+      setIsTransactionPending(false);
     }
   }
   const handleDeposit = async () => {
     setWaitMessage(null);
+    setIsTransactionPending(false);
     if (guniRouter && poolDetails && depositParams) {
       let tx;
+      setShowTransactionModal(true);
+      setWaitMessage(`Mint G-UNI`);
       if (depositProtocol == 'addLiquidity') {
         tx = await guniRouter.addLiquidity(...depositParams);
       } else if (depositProtocol == 'addLiquidityETH') {
@@ -149,18 +166,18 @@ function AddLiquidityPanel(props: PoolParams) {
       } else if (depositProtocol == 'rebalanceAndAddLiquidityETH') {
         tx = await guniRouter.rebalanceAndAddLiquidityETH(...depositParams, {value: is0Weth ? depositParams[1]:depositParams[2]});
       } else {
+        setShowTransactionModal(false);
         return;
       }
-      setWaitMessage(`Minting...`);
-      await tx.wait();
-      setWaitMessage(null);
+      setPendingTxHash(tx.hash);
       await reset();
+      await tx.wait();
     }
   }
   const handleTryInputs = async () => {
     if (account && guniPool && guniResolver && quoter && token0 && token1 && guniRouter) {
       setInputError(null);
-      setShowModal(false);
+      setShowDetailsModal(false);
       setIsApproved0(false);
       setIsApproved1(false);
       const details = await fetchPoolDetails(guniPool, token0, token1, account);
@@ -211,7 +228,7 @@ function AddLiquidityPanel(props: PoolParams) {
           setExpectedMint(formatBigNumber(res[2], details.decimals));
           setDepositProtocol(useEth && (is0Weth || is1Weth) ? 'addLiquidityETH': 'addLiquidity');
           setDepositParams([guniPool.address, in0, in1, 0, 0, account]);
-          setShowModal(true);
+          setShowDetailsModal(true);
         } else {
           const res = await guniResolver.getRebalanceParams(guniPool.address, in0, in1, 200);
           const [zeroForOne, swapAmount, swapThreshold] = res;
@@ -235,7 +252,7 @@ function AddLiquidityPanel(props: PoolParams) {
             setExpectedMint(formatBigNumber(res2[2], details.decimals));
             setDepositProtocol(useEth && (is0Weth || is1Weth) ? 'rebalanceAndAddLiquidityETH': 'rebalanceAndAddLiquidity');
             setDepositParams([guniPool.address, in0, in1, zeroForOne, swapAmount, swapThreshold, 0, 0, account]);
-            setShowModal(true);
+            setShowDetailsModal(true);
           } else {
             const res2 = await guniPool.getMintAmounts(in0, in1);
             setExpected0(formatBigNumber(res2[0], details.decimals0));
@@ -243,7 +260,7 @@ function AddLiquidityPanel(props: PoolParams) {
             setExpectedMint(formatBigNumber(res2[2], details.decimals));
             setDepositProtocol(useEth && (is0Weth || is1Weth) ? 'addLiquidityETH': 'addLiquidity');
             setDepositParams([guniPool.address, in0, in1, 0, 0, account]);
-            setShowModal(true);
+            setShowDetailsModal(true);
           }
         }
       } catch(e) {
@@ -273,19 +290,14 @@ function AddLiquidityPanel(props: PoolParams) {
 
   const reset = async () => {
     setInputError(null);
-    setWaitMessage(null);
     setIsApproved0(false);
     setIsApproved1(false);
-    setShowModal(false);
-    setSwapAssets(true);
-    setUseEth(true);
-    setInput0(null);
-    setInput1(null);
     setExpected0(null);
     setExpected1(null);
+    setInput0(null);
+    setInput1(null);
     setExpectedMint(null);
-    setDepositProtocol(null);
-    setDepositParams(null);
+    setShowDetailsModal(false);
     if (guniPool && token0 && token1) {
       const details = await fetchPoolDetails(guniPool, token0, token1, account);
       setPoolDetails(details);
@@ -296,7 +308,7 @@ function AddLiquidityPanel(props: PoolParams) {
       {poolDetails ?
         <>
           <h2>{poolDetails.name}</h2>
-          {!showModal ?
+          {!showDetailsModal ?
           <>
             <p>
               <strong>TVL:</strong>
@@ -363,12 +375,6 @@ function AddLiquidityPanel(props: PoolParams) {
             </Area>
             <br></br>
             <Area>
-              Rebalance my assets (swap) before deposit?
-              <br></br>
-              <label className="switch">
-                <input type="checkbox" onClick={() => handleRebalanceCheckbox()}/>
-                <div><br></br>{swapAssets ? 'yes':'no'}</div>
-              </label>
               {(is0Weth || is1Weth) ?
                 <>
                   Use WETH or ETH?
@@ -391,18 +397,18 @@ function AddLiquidityPanel(props: PoolParams) {
           : 
             <></>
           }
-          {showModal ? 
+          <TransactionConfirmationModal content={() => (<p>hi!!!</p>)} isOpen={showTransactionModal} onDismiss={() => setShowTransactionModal(false)} hash={pendingTxHash ? pendingTxHash : undefined} attemptingTxn={!isTransactionPending} pendingText={waitMessage ? waitMessage : ''}/>
+          {showDetailsModal ? 
             <Popover>
               <MarginLeft>
                 <h3>Add Liquidity</h3>
-                {`Max Input: ${input0 ? Number(input0).toFixed(3) : '0'} ${poolDetails.symbol0}, ${input1 ? Number(input1).toFixed(3) : '0'} ${poolDetails.symbol1}`}<br></br>
-                Swap: {(swapAssets && depositParams) ? depositParams[3] ? `${formatBigNumber(depositParams[4], poolDetails.decimals0, 3)} ${poolDetails.symbol0}`: `${formatBigNumber(depositParams[4], poolDetails.decimals1, 3)} ${poolDetails.symbol1}`: 'no swap'}<br></br>
+                {`Max Input: ${input0 ? Number(input0).toFixed(3) : '0'} ${(useEth && is0Weth) ? 'ETH' : poolDetails.symbol0}, ${input1 ? Number(input1).toFixed(3) : '0'} ${(useEth && is1Weth) ? 'ETH' : poolDetails.symbol1}`}<br></br>
+                Swap: {(swapAssets && depositParams) ? depositParams[3] ? `${formatBigNumber(depositParams[4], poolDetails.decimals0, 3)} ${(useEth && is0Weth) ? 'ETH' : poolDetails.symbol0}`: `${formatBigNumber(depositParams[4], poolDetails.decimals1, 3)} ${(useEth && is1Weth) ? 'ETH' : poolDetails.symbol1}`: 'no swap'}<br></br>
                 {`Expected Deposit: ${expected0} ${poolDetails.symbol0}, ${expected1} ${poolDetails.symbol1}`}<br></br>
                 {`Expected Mint: ${expectedMint} ${poolDetails.symbol} (${(100 * Number(expectedMint) / (Number(formatBigNumber(poolDetails.supply, poolDetails.decimals, 8))+Number(expectedMint))).toFixed(3)}% of supply)`}
               </MarginLeft>
-              {waitMessage ? <CenteredFlex>({waitMessage})</CenteredFlex>: <CenteredFlex>&nbsp;</CenteredFlex>}
               <CenteredFlex>
-                {isApproved0 && isApproved1 ? <ButtonLong onClick={() => handleDeposit()}>Submit Transaction</ButtonLong> : isApproved0 ? <ButtonLong onClick={() => handleApprove1()}>{`Approve ${poolDetails.symbol1}`}</ButtonLong> : <ButtonLong onClick={() => handleApprove0()}>{`Approve ${poolDetails.symbol0}`}</ButtonLong>}
+                {isApproved0 && isApproved1 ? <ButtonLong onClick={() => handleDeposit()} disabled={isTransactionPending}>{!isTransactionPending ? 'Submit Transaction':'Pending...'}</ButtonLong> : isApproved0 ? <ButtonLong onClick={() => handleApprove1()}disabled={isTransactionPending}>{!isTransactionPending ? `Approve ${poolDetails.symbol1}`:'Pending...'}</ButtonLong> : <ButtonLong onClick={() => handleApprove0()} disabled={isTransactionPending}>{!isTransactionPending ? `Approve ${poolDetails.symbol0}`:'Pending...'}</ButtonLong>}
               </CenteredFlex>
               <br></br>
               <CenteredFlex>

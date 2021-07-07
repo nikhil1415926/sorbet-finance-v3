@@ -11,6 +11,7 @@ import {
 import { Currency, Token, WETH9 } from '@uniswap/sdk-core';
 import { useActiveWeb3React } from 'hooks/web3';
 import { Contract } from '@ethersproject/contracts'
+import TransactionConfirmationModal from 'components/TransactionConfirmationModal'
 //import useUSDCPrice from 'hooks/useUSDCPrice'
 //import { useTranslation } from 'react-i18next'
 import { Area, Button, ButtonLong, MarginLeft, Popover, CenteredFlex, MAX_UINT } from '../AddLiquidity'
@@ -25,9 +26,12 @@ function RemoveLiquidityPanel(props: PoolParams) {
   const [is0Weth, setIs0Weth] = useState<boolean>(false);
   const [is1Weth, setIs1Weth] = useState<boolean>(false);
   const [useEth, setUseEth] = useState<boolean>(true);
+  const [isTransactionPending, setIsTransactionPending] = useState<boolean>(false);
+  const [showTransactionModal, setShowTransactionModal] = useState(false);
+  const [pendingTxHash, setPendingTxHash] = useState<string|null>();
   const [expected0, setExpected0] = useState<string|null>();
   const [expected1, setExpected1] = useState<string|null>();
-  const [showModal, setShowModal] = useState<boolean>(false);
+  const [showDetailsModal, setShowDetailsModal] = useState<boolean>(false);
   const [burnParams, setBurnParams] = useState<any|null>();
   const [waitMessage, setWaitMessage] = useState<string|null>();
   const [currency, setCurrency] = useState<Currency>();
@@ -37,45 +41,52 @@ function RemoveLiquidityPanel(props: PoolParams) {
   const token1 = useTokenContract(props.token1);
   const guniRouter = useGUniRouterContract();
   const handleChangeInput = (e: any) => {
-    setShowModal(false);
+    setShowDetailsModal(false);
     setInputBurn(e);
   }
   const handleEthCheckbox = () => {
-    setShowModal(false);
+    setShowDetailsModal(false);
     setUseEth(!useEth);
   }
   const handleCancel = () => {
-    setShowModal(false);
+    setShowDetailsModal(false);
   }
   const handleApprove = async () => {
     setWaitMessage(null);
+    setIsTransactionPending(false);
     if (guniPool && guniRouter && poolDetails) {
+      setShowTransactionModal(true);
+      setWaitMessage(`Approve G-UNI`);
       const tx = await guniPool.approve(guniRouter.address, MAX_UINT);
-      setWaitMessage(`Approving...`);
+      setPendingTxHash(tx.hash);
+      setIsTransactionPending(true);
       await tx.wait();
-      setWaitMessage(null);
       setIsApproved(true);
+      setIsTransactionPending(false);
     }
   }
   const handleBurn = async () => {
     setWaitMessage(null);
+    setIsTransactionPending(false);
     if (guniRouter && poolDetails && burnParams) {
       let tx;
+      setShowTransactionModal(true);
+      setWaitMessage(`Burn G-UNI`);
       if (useEth && (is0Weth || is1Weth)) {
         tx = await guniRouter.removeLiquidityETH(...burnParams)
       } else {
         tx = await guniRouter.removeLiquidity(...burnParams)
       }
-      setWaitMessage(`Burning...`);
-      await tx.wait();
-      setWaitMessage(null);
+      setPendingTxHash(tx.hash);
+      setIsTransactionPending(true);
       await reset();
+      await tx.wait();
     }
   }
   const handleTryInput = async () => {
     if (account && guniPool && token0 && token1 && guniRouter) {
       setInputError(null);
-      setShowModal(false);
+      setShowDetailsModal(false);
       const details = await fetchPoolDetails(guniPool, token0, token1, account);
       setPoolDetails(details);
       if (!details) {
@@ -99,7 +110,7 @@ function RemoveLiquidityPanel(props: PoolParams) {
       setExpected0(formatBigNumber(burn0, details.decimals0));
       setExpected1(formatBigNumber(burn1, details.decimals1));
       setBurnParams([guniPool.address, input, burn0.div(ethers.BigNumber.from('2')), burn1.div(ethers.BigNumber.from('2')), account]);
-      setShowModal(true);
+      setShowDetailsModal(true);
     }
   }
 
@@ -125,13 +136,10 @@ function RemoveLiquidityPanel(props: PoolParams) {
 
   const reset = async () => {
     setInputError(null);
-    setWaitMessage(null);
-    setShowModal(false);
-    setUseEth(true);
     setInputBurn(null);
-    setExpected0(null);
     setExpected1(null);
-    setBurnParams(null);
+    setExpected0(null);
+    setShowDetailsModal(false);
     if (guniPool && token0 && token1) {
       const details = await fetchPoolDetails(guniPool, token0, token1, account);
       setPoolDetails(details);
@@ -142,7 +150,7 @@ function RemoveLiquidityPanel(props: PoolParams) {
       {poolDetails ?
         <>
           <h2>{poolDetails.name}</h2>
-          {!showModal ?
+          {!showDetailsModal ?
           <>
             <p>
               <strong>TVL:</strong>
@@ -191,7 +199,8 @@ function RemoveLiquidityPanel(props: PoolParams) {
           : 
             <></>
           }
-          {showModal ? 
+          <TransactionConfirmationModal content={() => (<p>hi!!!</p>)} isOpen={showTransactionModal} onDismiss={() => setShowTransactionModal(false)} hash={pendingTxHash ? pendingTxHash : undefined} attemptingTxn={!isTransactionPending} pendingText={waitMessage ? waitMessage : ''}/>
+          {showDetailsModal ? 
             <Popover>
               <MarginLeft>
                 <h3>Remove Liquidity</h3>
@@ -199,9 +208,8 @@ function RemoveLiquidityPanel(props: PoolParams) {
                 <br></br>
                 {`Expected Return: ${expected0} ${poolDetails.symbol0}, ${expected1} ${poolDetails.symbol1}`}<br></br>
               </MarginLeft>
-              {waitMessage ? <CenteredFlex>({waitMessage})</CenteredFlex> : <CenteredFlex>&nbsp;</CenteredFlex>}
               <CenteredFlex>
-                {isApproved ? <ButtonLong onClick={() => handleBurn()}>Submit Transaction</ButtonLong> : <ButtonLong onClick={() => handleApprove()}>{`Approve ${poolDetails.symbol}`}</ButtonLong>}
+                {isApproved ? <ButtonLong onClick={() => handleBurn()} disabled={isTransactionPending}>{!isTransactionPending ? 'Submit Transaction' : 'Pending...'}</ButtonLong> : <ButtonLong onClick={() => handleApprove()} disabled={isTransactionPending}>{!isTransactionPending ? `Approve ${poolDetails.symbol}` : 'Pending...'}</ButtonLong>}
               </CenteredFlex>
               <br></br>
               <CenteredFlex>

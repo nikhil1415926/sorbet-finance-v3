@@ -330,7 +330,7 @@ export default function Header() {
           DCA (soon)
         </StyledNavLink>
         <StyledNavLink id={`pools-nav-link`} to={'/pools'}>
-          Pools (soon)
+          Pools
         </StyledNavLink>
       </HeaderLinks>
       <HeaderControls>
