@@ -2051,7 +2051,7 @@
     "@ethersproject/properties" "^5.3.0"
     "@ethersproject/strings" "^5.3.0"
 
-"@gelatonetwork/limit-orders-lib@^1.0.3":
+"@gelatonetwork/limit-orders-lib@^1.0.4":
   version "1.0.4"
   resolved "https://registry.yarnpkg.com/@gelatonetwork/limit-orders-lib/-/limit-orders-lib-1.0.4.tgz#4625a5c92e14202555f3306cec1dbeb8a58b3f1a"
   integrity sha512-0FVELR/YYacEPFgiO2c62FyFUFT9mOvs67ei3T+nInp60GODG8BuUBERdBotoU/n3MBONnN5gtAOC3NtdxiwiA==
@@ -2060,12 +2060,12 @@
     graphql "15.5.0"
     graphql-request "3.4.0"
 
-"@gelatonetwork/limit-orders-react@^0.0.9":
-  version "0.0.9"
-  resolved "https://registry.yarnpkg.com/@gelatonetwork/limit-orders-react/-/limit-orders-react-0.0.9.tgz#f8cd03c14006059faf93cd447163771b6765e96b"
-  integrity sha512-5vmxtuHNoXQcUxAslomJjRZRRjYOqI39iinD+WeE5ZRQOFnLNjdcMHunhKCm+B4+W54umG5hQiYhvbOqtNABxA==
+"@gelatonetwork/limit-orders-react@^0.0.11":
+  version "0.0.11"
+  resolved "https://registry.yarnpkg.com/@gelatonetwork/limit-orders-react/-/limit-orders-react-0.0.11.tgz#e0873637a64a39869d37cb8718d442b33c987d56"
+  integrity sha512-w0HKu+nomyNH7qnz50joGMpS0ytv5WPJ0NFmdrCPIX4ye7er/ird0uvwzyEVV92rLvpwKModKtHTxIFQ/tTI0A==
   dependencies:
-    "@gelatonetwork/limit-orders-lib" "^1.0.3"
+    "@gelatonetwork/limit-orders-lib" "^1.0.4"
     "@popperjs/core" "^2.9.2"
     "@reach/dialog" "^0.15.0"
     "@uniswap/default-token-list" "^2.0.0"
