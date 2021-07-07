@@ -43,23 +43,23 @@ export interface ListenerOptions {
 }
 
 export const addMulticallListeners = createAction<{ chainId: number; calls: Call[]; options?: ListenerOptions }>(
-  'multicall/addMulticallListeners'
+  'gmulticall/addMulticallListeners'
 )
 export const removeMulticallListeners = createAction<{ chainId: number; calls: Call[]; options?: ListenerOptions }>(
-  'multicall/removeMulticallListeners'
+  'gmulticall/removeMulticallListeners'
 )
 export const fetchingMulticallResults = createAction<{ chainId: number; calls: Call[]; fetchingBlockNumber: number }>(
-  'multicall/fetchingMulticallResults'
+  'gmulticall/fetchingMulticallResults'
 )
 export const errorFetchingMulticallResults = createAction<{
   chainId: number
   calls: Call[]
   fetchingBlockNumber: number
-}>('multicall/errorFetchingMulticallResults')
+}>('gmulticall/errorFetchingMulticallResults')
 export const updateMulticallResults = createAction<{
   chainId: number
   blockNumber: number
   results: {
     [callKey: string]: string | null
   }
-}>('multicall/updateMulticallResults')
+}>('gmulticall/updateMulticallResults')

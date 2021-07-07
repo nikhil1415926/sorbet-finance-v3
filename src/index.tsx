@@ -61,6 +61,7 @@ function Gelato({ children }: { children?: React.ReactNode }) {
       chainId={chainId}
       account={account ?? undefined}
       toggleWalletModal={toggleWalletModal}
+      useDefaultTheme={false}
     >
       {children}
     </GelatoProvider>
