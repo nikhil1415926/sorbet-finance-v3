@@ -1,5 +1,6 @@
 import { AbstractConnector } from '@web3-react/abstract-connector'
 import { UnsupportedChainIdError, useWeb3React } from '@web3-react/core'
+import useIsArgentWallet from 'hooks/useIsArgentWallet'
 import { darken, lighten } from 'polished'
 import React, { useMemo } from 'react'
 import { Activity } from 'react-feather'
@@ -172,8 +173,14 @@ function Web3StatusInner() {
   const hasPendingTransactions = !!pending.length
   const toggleWalletModal = useWalletModalToggle()
 
+  const isArgentWallet = useIsArgentWallet()
+
   if (account) {
-    return (
+    return isArgentWallet ? (
+      <Web3StatusError onClick={toggleWalletModal}>
+        <Text>Argent wallets are currently not supported</Text>
+      </Web3StatusError>
+    ) : (
       <Web3StatusConnected id="web3-status-connected" onClick={toggleWalletModal} pending={hasPendingTransactions}>
         {hasPendingTransactions ? (
           <RowBetween>
