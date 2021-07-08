@@ -18,6 +18,7 @@ import { GelatoProvider } from '@gelatonetwork/limit-orders-react'
 import { useActiveWeb3React } from 'hooks/web3'
 import { useWalletModalToggle } from 'state/application/hooks'
 import useIsArgentWallet from 'hooks/useIsArgentWallet'
+import { addOrderToDB } from './lib/firestore'
 
 const Web3ProviderNetwork = createWeb3ReactRoot(NetworkContextName)
 
@@ -65,6 +66,7 @@ function Gelato({ children }: { children?: React.ReactNode }) {
       account={isArgentWallet ? undefined : account ?? undefined}
       toggleWalletModal={toggleWalletModal}
       useDefaultTheme={false}
+      addOrderToDB={addOrderToDB}
     >
       {children}
     </GelatoProvider>
