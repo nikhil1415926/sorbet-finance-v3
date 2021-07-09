@@ -2,7 +2,6 @@ import React, {useEffect, useState} from 'react';
 //import styled from "styled-components";
 import {useParams} from "react-router-dom";
 import {PoolDetails, PoolParams, PoolTokens, fetchPoolDetails, formatBigNumber} from '../../components/PoolInfo';
-import CurrencyInputPanel from 'components/CurrencyInputPanel'
 import {
   useTokenContract,
   useGUniPoolContract,
@@ -14,7 +13,9 @@ import { Contract } from '@ethersproject/contracts'
 import TransactionConfirmationModal from 'components/TransactionConfirmationModal'
 //import useUSDCPrice from 'hooks/useUSDCPrice'
 //import { useTranslation } from 'react-i18next'
-import { Area, Button, ButtonLong, MarginLeft, Popover, CenteredFlex, MAX_UINT } from '../AddLiquidity'
+import { Area, Button, MarginLeft, Column, Row, Back, MAX_UINT, Input } from '../AddLiquidity'
+import {Box, Title} from 'pages/Pools'
+import Modal from 'components/Modal'
 import '../AddLiquidity/toggle.css';
 import { ethers } from 'ethers';
 
@@ -22,7 +23,7 @@ function RemoveLiquidityPanel(props: PoolParams) {
   const [poolDetails, setPoolDetails] = useState<PoolDetails|null>();
   const [inputBurn, setInputBurn] = useState<string|null>();
   const [inputError, setInputError] = useState<string|null>();
-  const [isApproved, setIsApproved] = useState<boolean>(false);
+  const [isApproved, setIsApproved] = useState<boolean>(true);
   const [is0Weth, setIs0Weth] = useState<boolean>(false);
   const [is1Weth, setIs1Weth] = useState<boolean>(false);
   const [useEth, setUseEth] = useState<boolean>(true);
@@ -32,6 +33,8 @@ function RemoveLiquidityPanel(props: PoolParams) {
   const [expected0, setExpected0] = useState<string|null>();
   const [expected1, setExpected1] = useState<string|null>();
   const [showDetailsModal, setShowDetailsModal] = useState<boolean>(false);
+  const [removeEnabled, setRemoveEnabled] = useState<boolean>(false);
+  const [noInput, setNoInput] = useState<boolean>(false);
   const [burnParams, setBurnParams] = useState<any|null>();
   const [waitMessage, setWaitMessage] = useState<string|null>();
   const [currency, setCurrency] = useState<Currency>();
@@ -63,6 +66,7 @@ function RemoveLiquidityPanel(props: PoolParams) {
       await tx.wait();
       setIsApproved(true);
       setIsTransactionPending(false);
+      setRemoveEnabled(true);
     }
   }
   const handleBurn = async () => {
@@ -71,7 +75,7 @@ function RemoveLiquidityPanel(props: PoolParams) {
     if (guniRouter && poolDetails && burnParams) {
       let tx;
       setShowTransactionModal(true);
-      setWaitMessage(`Burn G-UNI`);
+      setWaitMessage(`Burn G-UNI and remove ${useEth && is0Weth ? 'ETH' : poolDetails.symbol0}/${useEth && is1Weth ? 'ETH' : poolDetails.symbol1} liquidity`);
       if (useEth && (is0Weth || is1Weth)) {
         tx = await guniRouter.removeLiquidityETH(...burnParams)
       } else {
@@ -81,34 +85,18 @@ function RemoveLiquidityPanel(props: PoolParams) {
       setIsTransactionPending(true);
       await reset();
       await tx.wait();
+      setIsTransactionPending(false);
     }
   }
   const handleTryInput = async () => {
-    if (account && guniPool && token0 && token1 && guniRouter) {
+    if (account && guniPool && token0 && token1 && guniRouter && poolDetails) {
       setInputError(null);
       setShowDetailsModal(false);
-      const details = await fetchPoolDetails(guniPool, token0, token1, account);
-      setPoolDetails(details);
-      if (!details) {
-        setInputError('Failed to fetch pool data');
-        return;
-      }
-      const input = inputBurn ? ethers.utils.parseUnits(inputBurn, details.decimals0.toString()) : ethers.constants.Zero;
-      if (input.eq(ethers.constants.Zero)) {
-        setInputError(`Must remove non-zero amount of liquidity`)
-        return;
-      }
-      if (input.gt(details.balancePool)) {
-        setInputError(`Insufficient balance of ${details.symbol}`);
-        return;
-      }
-      if ((await guniPool.allowance(account, guniRouter.address)).gte(input)) {
-        setIsApproved(true);
-      }
-      const burn0 = input.mul(details.supply0).div(details.supply);
-      const burn1 = input.mul(details.supply1).div(details.supply);
-      setExpected0(formatBigNumber(burn0, details.decimals0));
-      setExpected1(formatBigNumber(burn1, details.decimals1));
+      const input = inputBurn ? ethers.utils.parseUnits(inputBurn, poolDetails.decimals0.toString()) : ethers.constants.Zero;
+      const burn0 = input.mul(poolDetails.supply0).div(poolDetails.supply);
+      const burn1 = input.mul(poolDetails.supply1).div(poolDetails.supply);
+      setExpected0(formatBigNumber(burn0, poolDetails.decimals0));
+      setExpected1(formatBigNumber(burn1, poolDetails.decimals1));
       setBurnParams([guniPool.address, input, burn0.div(ethers.BigNumber.from('2')), burn1.div(ethers.BigNumber.from('2')), account]);
       setShowDetailsModal(true);
     }
@@ -134,6 +122,35 @@ function RemoveLiquidityPanel(props: PoolParams) {
     getPool();
   }, [guniPool, token0, token1, account, chainId]);
 
+  useEffect(() => {
+    const checkApproval = async () => {
+      if (guniRouter && account && poolDetails && guniPool) {
+        let approved = false;
+        setInputError(null);
+        const input = inputBurn ? ethers.utils.parseUnits(inputBurn, poolDetails.decimals.toString()) : ethers.constants.Zero;
+        if (input.eq(0)) {
+          setRemoveEnabled(false);
+          setNoInput(true);
+          return
+        } else {
+          setNoInput(false);
+        }
+        if (input.gt(poolDetails.balancePool)) {
+          setInputError('Insufficient G-UNI balance')
+          return
+        }
+        if (input.lte((await guniPool.allowance(account, guniRouter.address)))) {
+          approved = true;
+        }
+        setIsApproved(approved);
+        if (approved) {
+          setRemoveEnabled(true);
+        }
+      }
+    }
+    checkApproval()
+  }, [inputBurn, guniPool, guniRouter, account, poolDetails]);
+
   const reset = async () => {
     setInputError(null);
     setInputBurn(null);
@@ -148,79 +165,79 @@ function RemoveLiquidityPanel(props: PoolParams) {
   return (
     <>
       {poolDetails ?
-        <>
-          <h2>{poolDetails.name}</h2>
-          {!showDetailsModal ?
-          <>
-            <p>
-              <strong>TVL:</strong>
-              {` ${formatBigNumber(poolDetails.supply0, poolDetails.decimals0, 2)} ${poolDetails.symbol0} + ${formatBigNumber(poolDetails.supply1, poolDetails.decimals1, 2)} ${poolDetails.symbol1} `}
-              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-              <strong>Supply:</strong>
-              {` ${formatBigNumber(poolDetails.supply, poolDetails.decimals, 4)} ${poolDetails.symbol}`}
-            </p>
-            <p>
-              <strong>Your Position:</strong>{` ${formatBigNumber(poolDetails.balancePool, poolDetails.decimals, 4)} ${poolDetails.symbol}`}&nbsp;&nbsp;&nbsp;{`(${formatBigNumber(poolDetails.share0, poolDetails.decimals0, 2)} ${poolDetails.symbol0} + ${formatBigNumber(poolDetails.share1, poolDetails.decimals1, 2)} ${poolDetails.symbol1})`}
-            </p>
-            <Area>
-                <CurrencyInputPanel
-                value={inputBurn ? inputBurn : ""}
-                onUserInput={(e: string) => handleChangeInput(e)}
-                onMax={() => setInputBurn(formatBigNumber(poolDetails.balancePool, poolDetails.decimals, poolDetails.decimals))}
-                showCurrencySelector={true}
-                showMaxButton={true}
-                hideBalance={false}
-                currency={currency}
-                id={'input'}
-              />
-            </Area>
-            <br></br>
-            <Area>
-              {(is0Weth || is1Weth) ?
-                <>
-                  Receive WETH or ETH?
-                  <br></br>
-                  <label className="switch">
-                    <input type="checkbox" onClick={() => handleEthCheckbox()}/>
-                    <div><br></br>{useEth ? 'ETH':'WETH'}</div>
-                  </label>
-                </>
-              :
-                <></>
-              }
-            </Area>
-            <Button onClick={() => handleTryInput()}>Remove Liquidity</Button>
-            {inputError ? <p style={{color: 'red'}}>{inputError}</p> : <></>}
-            <br></br>
-            <br></br>
-            <a href={`/#/pools/add/${props.pool.address}`}>add liquidity</a>
-            <a href={'/#/pools'}>all pools</a>
-          </>
-          : 
-            <></>
-          }
-          <TransactionConfirmationModal content={() => (<p>hi!!!</p>)} isOpen={showTransactionModal} onDismiss={() => setShowTransactionModal(false)} hash={pendingTxHash ? pendingTxHash : undefined} attemptingTxn={!isTransactionPending} pendingText={waitMessage ? waitMessage : ''}/>
+        <Box>
+          <Row>
+          <Title>
+            {`Remove Liquidity from ${poolDetails.symbol0}/${poolDetails.symbol1} LP`}
+          </Title>
+          <Back href={'/#/pools'}>back</Back>
+          </Row>
+          <br></br>
+          <Area>
+              <Input
+              value={inputBurn ? inputBurn : ""}
+              onUserInput={(e: string) => handleChangeInput(e)}
+              onMax={() => setInputBurn(formatBigNumber(poolDetails.balancePool, poolDetails.decimals, poolDetails.decimals))}
+              showCurrencySelector={true}
+              showMaxButton={true}
+              hideBalance={false}
+              currency={currency}
+              id={'input'}
+            />
+          </Area>
+          <Area>
+            {(is0Weth || is1Weth) ?
+              <>
+                Receive WETH or ETH?
+                <br></br>
+                <label className="switch">
+                  <input type="checkbox" onClick={() => handleEthCheckbox()}/>
+                  <div><br></br>{useEth ? 'ETH':'WETH'}</div>
+                </label>
+              </>
+            :
+              <></>
+            }
+          </Area>
+          {inputError ? <Area><p style={{color: 'red'}}>{inputError}</p></Area>:<Area><p>&nbsp;</p></Area>}
+          <Area>
+            {(isApproved || noInput) ?
+              <></>
+            :
+              <>
+              <Button onClick={() => handleApprove()} disabled={isTransactionPending}>{isTransactionPending ? 'Pending Approval...': `Approve ${poolDetails.symbol}`}</Button>
+              <br></br>
+              </>
+            }
+            <Button disabled={!removeEnabled || showDetailsModal} onClick={() => handleTryInput()}>Remove Liquidity</Button>
+          </Area>
+          <br></br>
+          <br></br>
+          <TransactionConfirmationModal content={() => (<p></p>)} isOpen={showTransactionModal} onDismiss={() => setShowTransactionModal(false)} hash={pendingTxHash ? pendingTxHash : undefined} attemptingTxn={!isTransactionPending} pendingText={waitMessage ? waitMessage : ''}/>
           {showDetailsModal ? 
-            <Popover>
+            <Modal isOpen={true} onDismiss={() => handleCancel()} maxHeight={90}>
+              <Column>
               <MarginLeft>
-                <h3>Remove Liquidity</h3>
+              <h2>Remove Liquidity</h2>
                 {`Burn: ${Number(inputBurn).toFixed(5)} ${poolDetails.symbol} (${(100 * Number(inputBurn) / (Number(formatBigNumber(poolDetails.supply, poolDetails.decimals, 8)))).toFixed(3)}% of supply)`}
                 <br></br>
-                {`Expected Return: ${expected0} ${poolDetails.symbol0}, ${expected1} ${poolDetails.symbol1}`}<br></br>
+                {`Est. Return: ${expected0} ${poolDetails.symbol0}, ${expected1} ${poolDetails.symbol1}`}
               </MarginLeft>
-              <CenteredFlex>
-                {isApproved ? <ButtonLong onClick={() => handleBurn()} disabled={isTransactionPending}>{!isTransactionPending ? 'Submit Transaction' : 'Pending...'}</ButtonLong> : <ButtonLong onClick={() => handleApprove()} disabled={isTransactionPending}>{!isTransactionPending ? `Approve ${poolDetails.symbol}` : 'Pending...'}</ButtonLong>}
-              </CenteredFlex>
+              <br></br><br></br>
+              <Area>
+                <Button onClick={() => handleBurn()} disabled={false}>Submit Transaction</Button>
+              </Area>
               <br></br>
-              <CenteredFlex>
-                <ButtonLong onClick={() => handleCancel()}>Cancel</ButtonLong>
-              </CenteredFlex>
-              <br></br>
-            </Popover>
+              <Area>
+                <Button onClick={() => handleCancel()}>Cancel</Button>
+              </Area>
+              <br></br><br></br>
+              </Column>
+            </Modal>
           :
             <></>
           }
-        </>
+        </Box>
       :
         <></>
       }

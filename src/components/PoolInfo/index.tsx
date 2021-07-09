@@ -4,6 +4,10 @@ import { useActiveWeb3React } from 'hooks/web3';
 import {ethers} from 'ethers';
 import { Contract } from '@ethersproject/contracts'
 import { BigNumber } from '@ethersproject/bignumber'
+import styled from "styled-components";
+import { useCurrency } from 'hooks/Tokens'
+import DoubleCurrencyLogo from 'components/DoubleLogo'
+import { ButtonPink } from 'components/Button'
 
 export type PoolTokens = {
   token0: string;
@@ -39,10 +43,68 @@ type AddressParam = {
   address: string;
 }
 
-export const formatBigNumber = (n: BigNumber, decimals: number, roundTo = 4): string => {
+export const formatBigNumber = (n: BigNumber, decimals: number, roundTo = 3): string => {
   const str = ethers.utils.formatUnits(n, decimals.toString());
-  return Number(str).toFixed(roundTo);
+  if (!str.includes(".")) {
+    return str
+  }
+  const sides = str.split(".");
+  const start = sides[0];
+  const end = sides[1];
+  if (end.length < roundTo) {
+    return str
+  }
+  return start + "." + end.substring(0, roundTo)
 }
+
+const ButtonSmall = styled(ButtonPink)`
+  width: 15%;
+  margin-right: 1rem;
+  padding-top: 0.03rem;
+  padding-bottom: 0.03rem;
+`;
+
+const ButtonMedium = styled(ButtonPink)`
+  width: 40%;
+`;
+
+const InnerBox = styled.div`
+  background-color: #2C2F36;
+  border-radius: 0.5rem;
+  border: 1px solid #7d7f7c;
+`;
+
+const TitleArea = styled.div`
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+`;
+
+const ButtonsArea = styled.div`
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+`;
+
+const Title = styled.p`
+  margin-left: 1rem;
+  font-weight: 800;
+  font-size: 1.2rem;
+`;
+
+const LogoWrapper = styled.p`
+  margin-left: 1rem;
+`;
+
+const LeftTitle = styled(Title)`
+  margin-left: -9.5rem;
+`;
+
+const DetailsBox = styled.div`
+  margin-left: 1rem;
+`;
 
 export const fetchPoolDetails = async (guniPool: Contract, token0: Contract, token1 : Contract, account : string|undefined|null) :Promise<PoolDetails|null> => {
   if (guniPool && token0 && token1) {
@@ -90,10 +152,23 @@ export const fetchPoolDetails = async (guniPool: Contract, token0: Contract, tok
 
 function PoolDetails(props: PoolParams) {
   const [poolDetails, setPoolDetails] = useState<PoolDetails|null>(null);
+  const [seeMore, setSeeMore] = useState<boolean>(false);
+  const [seeMoreText, setSeeMoreText] = useState<string>('Show');
   const {chainId, account} = useActiveWeb3React();
   const guniPool = props.pool;
   const token0 = useTokenContract(props.token0);
   const token1 = useTokenContract(props.token1);
+  const currency0 = useCurrency(props.token0);
+  const currency1 = useCurrency(props.token1);
+  const handleSeeMore = () => {
+    if (!seeMore) {
+      setSeeMore(true);
+      setSeeMoreText('Hide');
+    } else {
+      setSeeMore(false);
+      setSeeMoreText('Show');
+    }
+  }
   useEffect(() => {
     const getPoolDetails = async () => {
       if (guniPool && token0 && token1) {
@@ -106,23 +181,35 @@ function PoolDetails(props: PoolParams) {
   return (
     <>
       {poolDetails ? 
-        <>
-          <h1>{poolDetails.name}</h1>
-          <p>
-            <strong>TVL:</strong>
-            {` ${formatBigNumber(poolDetails.supply0, poolDetails.decimals0, 2)} ${poolDetails.symbol0} and ${formatBigNumber(poolDetails.supply1, poolDetails.decimals1, 2)} ${poolDetails.symbol1} `}
-            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-            <strong>Supply:</strong>
-            {` ${formatBigNumber(poolDetails.supply, poolDetails.decimals, 4)} ${poolDetails.symbol}`}
-          </p>
-          {poolDetails.balancePool.gt(0) ? <p><strong>Your Share:</strong>{` ${formatBigNumber(poolDetails.balancePool, poolDetails.decimals, 4)} ${poolDetails.symbol}`}</p>:<></>}
-          {poolDetails.balancePool.gt(0) ? <p><strong>Your Share Value:</strong>{` ${formatBigNumber(poolDetails.share0, poolDetails.decimals0, 2)} ${poolDetails.symbol0} and ${formatBigNumber(poolDetails.share1, poolDetails.decimals1, 2)} ${poolDetails.symbol1}`}</p>:<></>}
-          <p>
-            <a href={`/#/pools/add/${guniPool.address}`}>Add Liquidity</a>
-            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-            {poolDetails.balancePool.gt(0) ? <a href={`/#/pools/remove/${guniPool.address}`}>Remove Liquidity</a>:<></>}
-          </p>
-        </>
+        <InnerBox>
+          <TitleArea>
+            <LogoWrapper><DoubleCurrencyLogo currency0={currency0 ? currency0 : undefined} currency1={currency1 ? currency1 : undefined} size={36} margin={true} /></LogoWrapper>
+            <LeftTitle>{`${poolDetails.symbol0}/${poolDetails.symbol1} LP`}</LeftTitle>
+            <ButtonSmall onClick={() => handleSeeMore()}>{seeMoreText}</ButtonSmall>
+          </TitleArea>
+          {seeMore ?
+            <DetailsBox>
+              <p>
+                <strong>TVL:</strong>
+                {` ${formatBigNumber(poolDetails.supply0, poolDetails.decimals0, 2)} ${poolDetails.symbol0} + ${formatBigNumber(poolDetails.supply1, poolDetails.decimals1, 2)} ${poolDetails.symbol1} `}
+              </p>
+              <p>
+                <strong>Supply:</strong>
+                {` ${formatBigNumber(poolDetails.supply, poolDetails.decimals, 4)} ${poolDetails.symbol}`}
+              </p>
+              <p><strong>Your Share:</strong>{` ${formatBigNumber(poolDetails.balancePool, poolDetails.decimals, 4)} ${poolDetails.symbol}`}</p>
+              <p><strong>Your Share Value:</strong>{` ${formatBigNumber(poolDetails.share0, poolDetails.decimals0, 2)} ${poolDetails.symbol0} + ${formatBigNumber(poolDetails.share1, poolDetails.decimals1, 2)} ${poolDetails.symbol1}`}</p>
+              <ButtonsArea>
+                <ButtonMedium onClick={() => window.location.href = `/#/pools/add/${guniPool.address}`}>Add Liquidity</ButtonMedium>
+                &nbsp;&nbsp;&nbsp;&nbsp;
+                <ButtonMedium onClick={() => window.location.href = `/#/pools/remove/${guniPool.address}`}>Remove Liquidity</ButtonMedium>
+              </ButtonsArea>
+              <br></br>
+            </DetailsBox>
+          :
+            <></>
+          }
+        </InnerBox>
       :
         <></>
       }

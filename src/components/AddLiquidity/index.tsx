@@ -3,7 +3,7 @@ import styled from 'styled-components'
 import { useParams } from 'react-router-dom'
 import { PoolDetails, PoolParams, PoolTokens, fetchPoolDetails, formatBigNumber } from '../../components/PoolInfo'
 import CurrencyInputPanel from 'components/CurrencyInputPanel'
-import { ButtonGray, ButtonPink } from 'components/Button'
+import { ButtonPink } from 'components/Button'
 import TransactionConfirmationModal from 'components/TransactionConfirmationModal'
 import {
   useTokenContract,
@@ -16,47 +16,53 @@ import { tryParseAmount, useCurrency } from 'hooks/Tokens'
 import { WETH9 } from '@uniswap/sdk-core'
 import { useActiveWeb3React } from 'hooks/web3'
 import { Contract } from '@ethersproject/contracts'
-//import useUSDCPrice from 'hooks/useUSDCPrice'
 //import { useTranslation } from 'react-i18next'
 import { ReactComponent as Plus } from 'assets/images/plus-blue.svg'
 import './toggle.css'
 import { ethers } from 'ethers'
 import { useUSDCValue } from 'hooks/useUSDCPrice'
+import Modal from 'components/Modal'
+import {Box, Title} from 'pages/Pools'
 
 export const Area = styled.div`
-  width: 40%;
-`
-
-export const Button = styled(ButtonPink)`
-  width: 25%;
-`
-
-export const ButtonLong = styled(ButtonGray)`
-  background-color: #0645ad;
-  width: 50%;
-`
-
-export const MarginLeft = styled.p`
-  margin-left: 25%;
-`
-
-export const Popover = styled.div`
-  width: 50%;
-  background-color: black;
-  border: 2px solid #77aaff;
-  box-shadow: -5px 5px #77aaff;
-  color: white;
-  z-index: 11;
-`
-
-export const CenteredFlex = styled.div`
   display: flex;
-  flex-direction: row;
-  flex-wrap: no-wrap;
-  justify-content: center;
+  flex-direction: column;
   align-items: center;
+  justify-content: center;
+  width: 100%;
   text-align: center;
 `
+
+export const Row = styled.div`
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+`;
+
+export const Button = styled(ButtonPink)<{disabled?: boolean}>`
+  width: 97%;
+  background-color: ${({ disabled }) => (disabled ? 'grey':'#2172E5')};
+`
+
+export const MarginLeft = styled.div`
+  margin-left: 8%;
+`
+
+export const Column = styled.div`
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+`;
+
+export const Input = styled(CurrencyInputPanel)`
+  width: 97%;
+`;
+
+export const Back = styled.a`
+  margin-right: 5%;
+  font-weight: 800;
+`;
 
 const WrappedPlus = ({ ...rest }) => <Plus {...rest} />
 const ColoredWrappedPlus = styled(WrappedPlus)`
@@ -80,8 +86,10 @@ function AddLiquidityPanel(props: PoolParams) {
   const [inputError, setInputError] = useState<string | null>()
   const [is0Weth, setIs0Weth] = useState<boolean>(false)
   const [is1Weth, setIs1Weth] = useState<boolean>(false)
-  const [isApproved0, setIsApproved0] = useState<boolean>(false)
-  const [isApproved1, setIsApproved1] = useState<boolean>(false)
+  const [noInputs, setNoInputs] = useState<boolean>(true)
+  const [isApproved0, setIsApproved0] = useState<boolean>(true)
+  const [isApproved1, setIsApproved1] = useState<boolean>(true)
+  const [addEnabled, setAddEnabled] = useState<boolean>(false)
   const [isTransactionPending, setIsTransactionPending] = useState<boolean>(false)
   const [showTransactionModal, setShowTransactionModal] = useState(false)
   const [pendingTxHash, setPendingTxHash] = useState<string | null>()
@@ -144,6 +152,9 @@ function AddLiquidityPanel(props: PoolParams) {
       await tx.wait()
       setIsApproved0(true)
       setIsTransactionPending(false)
+      if (isApproved1) {
+        setAddEnabled(true);
+      }
     }
   }
   const handleApprove1 = async () => {
@@ -158,6 +169,9 @@ function AddLiquidityPanel(props: PoolParams) {
       await tx.wait()
       setIsApproved1(true)
       setIsTransactionPending(false)
+      if (isApproved0) {
+        setAddEnabled(true);
+      }
     }
   }
   const handleDeposit = async () => {
@@ -166,7 +180,7 @@ function AddLiquidityPanel(props: PoolParams) {
     if (guniRouter && poolDetails && depositParams) {
       let tx
       setShowTransactionModal(true)
-      setWaitMessage(`Mint G-UNI`)
+      setWaitMessage(`Deposit ${useEth && is0Weth ? 'ETH' : poolDetails.symbol0} and/or ${useEth && is1Weth ? 'ETH' : poolDetails.symbol1} liquidity and mint G-UNI`)
       if (depositProtocol == 'addLiquidity') {
         tx = await guniRouter.addLiquidity(...depositParams)
       } else if (depositProtocol == 'addLiquidityETH') {
@@ -183,63 +197,33 @@ function AddLiquidityPanel(props: PoolParams) {
         setShowTransactionModal(false)
         return
       }
+      setIsTransactionPending(true);
       setPendingTxHash(tx.hash)
       await reset()
       await tx.wait()
+      setIsTransactionPending(false);
     }
   }
   const handleTryInputs = async () => {
-    if (account && guniPool && guniResolver && quoter && token0 && token1 && guniRouter) {
+    if (account && guniPool && guniResolver && quoter && token0 && token1 && guniRouter && poolDetails) {
       setInputError(null)
       setShowDetailsModal(false)
-      setIsApproved0(false)
-      setIsApproved1(false)
-      const details = await fetchPoolDetails(guniPool, token0, token1, account)
-      setPoolDetails(details)
-      if (!details) {
-        setInputError('Failed to fetch pool data')
-        return
-      }
       try {
-        const in0 = input0 ? ethers.utils.parseUnits(input0, details.decimals0.toString()) : ethers.constants.Zero
-        const in1 = input1 ? ethers.utils.parseUnits(input1, details.decimals1.toString()) : ethers.constants.Zero
-        if (in0.gt(details.balance0) && (!useEth || !is0Weth)) {
-          setInputError(`Insufficient balance of ${details.symbol0}`)
-          return
-        } else if (useEth && is0Weth && in0.gt(details.balanceEth)) {
-          setInputError(`Insufficient balance of ETH`)
+        const in0 = input0 ? ethers.utils.parseUnits(input0, poolDetails.decimals0.toString()) : ethers.constants.Zero
+        const in1 = input1 ? ethers.utils.parseUnits(input1, poolDetails.decimals1.toString()) : ethers.constants.Zero
+        if (!swapAssets && poolDetails.supply0.gt(0) && in0.eq(ethers.constants.Zero)) {
+          setInputError(`Allow rebalance or provide non-zero value of ${poolDetails.symbol0}`)
           return
         }
-        if (in1.gt(details.balance1) && (!useEth || !is1Weth)) {
-          setInputError(`Insufficient balance of ${details.symbol1}`)
+        if (!swapAssets && poolDetails.supply1.gt(0) && in1.eq(ethers.constants.Zero)) {
+          setInputError(`Allow rebalance or provide non-zero value of ${poolDetails.symbol1}`)
           return
-        } else if (useEth && is0Weth && in1.gt(details.balanceEth)) {
-          setInputError(`Insufficient balance of ETH`)
-          return
-        }
-        if (in0.eq(ethers.constants.Zero) && in1.eq(ethers.constants.Zero)) {
-          setInputError(`Must provide non-zero amount of assets`)
-          return
-        }
-        if (!swapAssets && details.supply0.gt(0) && in0.eq(ethers.constants.Zero)) {
-          setInputError(`Allow rebalance or provide non-zero value of ${details.symbol0}`)
-          return
-        }
-        if (!swapAssets && details.supply1.gt(0) && in1.eq(ethers.constants.Zero)) {
-          setInputError(`Allow rebalance or provide non-zero value of ${details.symbol1}`)
-          return
-        }
-        if ((await token0.allowance(account, guniRouter.address)).gte(in0) || (is0Weth && useEth)) {
-          setIsApproved0(true)
-        }
-        if ((await token1.allowance(account, guniRouter.address)).gte(in1) || (is1Weth && useEth)) {
-          setIsApproved1(true)
         }
         if (!swapAssets) {
           const res = await guniPool.getMintAmounts(in0, in1)
-          setExpected0(formatBigNumber(res[0], details.decimals0))
-          setExpected1(formatBigNumber(res[1], details.decimals1))
-          setExpectedMint(formatBigNumber(res[2], details.decimals))
+          setExpected0(formatBigNumber(res[0], poolDetails.decimals0))
+          setExpected1(formatBigNumber(res[1], poolDetails.decimals1))
+          setExpectedMint(formatBigNumber(res[2], poolDetails.decimals))
           setDepositProtocol(useEth && (is0Weth || is1Weth) ? 'addLiquidityETH' : 'addLiquidity')
           setDepositParams([guniPool.address, in0, in1, 0, 0, account])
           setShowDetailsModal(true)
@@ -271,9 +255,9 @@ function AddLiquidityPanel(props: PoolParams) {
               new0 = in0.add(amountOut)
             }
             const res2 = await guniPool.getMintAmounts(new0, new1)
-            setExpected0(formatBigNumber(res2[0], details.decimals0))
-            setExpected1(formatBigNumber(res2[1], details.decimals1))
-            setExpectedMint(formatBigNumber(res2[2], details.decimals))
+            setExpected0(formatBigNumber(res2[0], poolDetails.decimals0))
+            setExpected1(formatBigNumber(res2[1], poolDetails.decimals1))
+            setExpectedMint(formatBigNumber(res2[2], poolDetails.decimals))
             setDepositProtocol(
               useEth && (is0Weth || is1Weth) ? 'rebalanceAndAddLiquidityETH' : 'rebalanceAndAddLiquidity'
             )
@@ -281,9 +265,9 @@ function AddLiquidityPanel(props: PoolParams) {
             setShowDetailsModal(true)
           } else {
             const res2 = await guniPool.getMintAmounts(in0, in1)
-            setExpected0(formatBigNumber(res2[0], details.decimals0))
-            setExpected1(formatBigNumber(res2[1], details.decimals1))
-            setExpectedMint(formatBigNumber(res2[2], details.decimals))
+            setExpected0(formatBigNumber(res2[0], poolDetails.decimals0))
+            setExpected1(formatBigNumber(res2[1], poolDetails.decimals1))
+            setExpectedMint(formatBigNumber(res2[2], poolDetails.decimals))
             setDepositProtocol(useEth && (is0Weth || is1Weth) ? 'addLiquidityETH' : 'addLiquidity')
             setDepositParams([guniPool.address, in0, in1, 0, 0, account])
             setShowDetailsModal(true)
@@ -313,6 +297,72 @@ function AddLiquidityPanel(props: PoolParams) {
     getPool()
   }, [guniPool, token0, token1, account, chainId])
 
+  useEffect(() => {
+    const checkApprovals = async () => {
+      if (token0 && token1 && guniRouter && account && poolDetails) {
+        let zeroApproved = false;
+        let oneApproved = false;
+        setInputError(null);
+        if (!input0 && !input1) {
+          setAddEnabled(false);
+          setNoInputs(true);
+          return
+        }
+        const in0 = input0 ? ethers.utils.parseUnits(input0, poolDetails.decimals0.toString()) : ethers.constants.Zero
+        const in1 = input1 ? ethers.utils.parseUnits(input1, poolDetails.decimals1.toString()) : ethers.constants.Zero
+        if (in0.gt(poolDetails.balance0) && (!useEth || !is0Weth)) {
+          setInputError(`Insufficient balance of ${poolDetails.symbol0}`)
+          setAddEnabled(false)
+          return
+        } else if (useEth && is0Weth && in0.gt(poolDetails.balanceEth)) {
+          setInputError(`Insufficient balance of ETH`)
+          setAddEnabled(false)
+          return
+        }
+        if (in1.gt(poolDetails.balance1) && (!useEth || !is1Weth)) {
+          setInputError(`Insufficient balance of ${poolDetails.symbol1}`)
+          setAddEnabled(false)
+          return
+        } else if (useEth && is0Weth && in1.gt(poolDetails.balanceEth)) {
+          setInputError(`Insufficient balance of ETH`)
+          setAddEnabled(false)
+          return
+        }
+        if (in0.eq(0) && in1.eq(0)) {
+          setNoInputs(true);
+          setAddEnabled(false)
+          return
+        } else {
+          setNoInputs(false);
+        }
+        if (in0.eq(0)) {
+          zeroApproved = true;
+        }
+        if (in1.eq(0)) {
+          oneApproved = true;
+        }
+        if (
+          (in0.lte((await token0.allowance(account, guniRouter.address)))) ||
+          (useEth && is0Weth)
+        ) {
+          zeroApproved = true;
+        }
+        if (
+          (in1.lte((await token1.allowance(account, guniRouter.address)))) ||
+          (useEth && is1Weth)
+        ) {
+          oneApproved = true;
+        }
+        setIsApproved0(zeroApproved);
+        setIsApproved1(oneApproved);
+        if (zeroApproved && oneApproved) {
+          setAddEnabled(true);
+        }
+      }
+    }
+    checkApprovals()
+  }, [input0, input1, token0, token1, account, poolDetails, guniRouter, is0Weth, is1Weth, useEth])
+
   const reset = async () => {
     setInputError(null)
     setIsApproved0(false)
@@ -331,118 +381,113 @@ function AddLiquidityPanel(props: PoolParams) {
   return (
     <>
       {poolDetails ? (
-        <>
-          <h2>{poolDetails.name}</h2>
-          {!showDetailsModal ? (
-            <>
-              <p>
-                <strong>TVL:</strong>
-                {` ${formatBigNumber(poolDetails.supply0, poolDetails.decimals0, 2)} ${
-                  poolDetails.symbol0
-                } + ${formatBigNumber(poolDetails.supply1, poolDetails.decimals1, 2)} ${poolDetails.symbol1} `}
-                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                <strong>Supply:</strong>
-                {` ${formatBigNumber(poolDetails.supply, poolDetails.decimals, 4)} ${poolDetails.symbol}`}
-              </p>
-              <p>
-                <strong>Your Position:</strong>
-                {` ${formatBigNumber(poolDetails.balancePool, poolDetails.decimals, 4)} ${poolDetails.symbol}`}
-                &nbsp;&nbsp;&nbsp;
-                {`(${formatBigNumber(poolDetails.share0, poolDetails.decimals0, 2)} ${
-                  poolDetails.symbol0
-                } + ${formatBigNumber(poolDetails.share1, poolDetails.decimals1, 2)} ${poolDetails.symbol1})`}
-              </p>
-              <Area>
-                {is0Weth && useEth ? (
-                  <CurrencyInputPanel
-                    value={input0 ? input0 : ''}
-                    onUserInput={(e: string) => handleChangeInput0(e)}
-                    onMax={() => setInput0(formatBigNumber(poolDetails.balanceEth, 18, 18))}
-                    showCurrencySelector={true}
-                    showMaxButton={true}
-                    hideBalance={false}
-                    currency={eth}
-                    id={'input0Eth'}
-                    fiatValue={fiatValueEth}
-                  />
-                ) : (
-                  <CurrencyInputPanel
-                    value={input0 ? input0 : ''}
-                    onUserInput={(e: string) => handleChangeInput0(e)}
-                    onMax={() =>
-                      setInput0(formatBigNumber(poolDetails.balance0, poolDetails.decimals0, poolDetails.decimals0))
-                    }
-                    showCurrencySelector={true}
-                    showMaxButton={true}
-                    hideBalance={false}
-                    currency={currency0}
-                    fiatValue={fiatValueCurrency0}
-                    id={'input0'}
-                  />
-                )}
-              </Area>
-              <CenteredFlex>
-                <ColoredWrappedPlus active={account} alt="plus" />
-              </CenteredFlex>
-              <Area>
-                {is1Weth && useEth ? (
-                  <CurrencyInputPanel
-                    value={input1 ? input1 : ''}
-                    onUserInput={(e: string) => handleChangeInput1(e)}
-                    onMax={() => setInput1(formatBigNumber(poolDetails.balanceEth, 18, 18))}
-                    showCurrencySelector={true}
-                    showMaxButton={true}
-                    hideBalance={false}
-                    currency={eth}
-                    fiatValue={fiatValueEth}
-                    id={'input1Eth'}
-                  />
-                ) : (
-                  <CurrencyInputPanel
-                    value={input1 ? input1 : ''}
-                    onUserInput={(e: string) => handleChangeInput1(e)}
-                    onMax={() =>
-                      setInput1(formatBigNumber(poolDetails.balance1, poolDetails.decimals1, poolDetails.decimals1))
-                    }
-                    showCurrencySelector={true}
-                    showMaxButton={true}
-                    hideBalance={false}
-                    currency={currency1}
-                    fiatValue={fiatValueCurrency1}
-                    id={'input1'}
-                  />
-                )}
-              </Area>
-              <br></br>
-              <Area>
-                {is0Weth || is1Weth ? (
-                  <>
-                    Use WETH or ETH?
+        <Box>
+          <Row>
+          <Title>
+            {`Add Liquidity to ${poolDetails.symbol0}/${poolDetails.symbol1} LP`}
+          </Title>
+          <Back href={'/#/pools'}>back</Back>
+          </Row>
+          <br></br>
+          <Area>
+            {is0Weth && useEth ? (
+              <Input
+                value={input0 ? input0 : ''}
+                onUserInput={(e: string) => handleChangeInput0(e)}
+                onMax={() => setInput0(formatBigNumber(poolDetails.balanceEth, 18, 18))}
+                showCurrencySelector={true}
+                showMaxButton={true}
+                hideBalance={false}
+                currency={eth}
+                id={'input0Eth'}
+                fiatValue={fiatValueEth}
+              />
+            ) : (
+              <Input
+                value={input0 ? input0 : ''}
+                onUserInput={(e: string) => handleChangeInput0(e)}
+                onMax={() =>
+                  setInput0(formatBigNumber(poolDetails.balance0, poolDetails.decimals0, poolDetails.decimals0))
+                }
+                showCurrencySelector={true}
+                showMaxButton={true}
+                hideBalance={false}
+                currency={currency0}
+                fiatValue={fiatValueCurrency0}
+                id={'input0'}
+              />
+            )}
+          </Area>
+          <Area>
+            <ColoredWrappedPlus active={account} alt="plus" />
+          </Area>
+          <Area>
+            {is1Weth && useEth ? (
+              <Input
+                value={input1 ? input1 : ''}
+                onUserInput={(e: string) => handleChangeInput1(e)}
+                onMax={() => setInput1(formatBigNumber(poolDetails.balanceEth, 18, 18))}
+                showCurrencySelector={true}
+                showMaxButton={true}
+                hideBalance={false}
+                currency={eth}
+                fiatValue={fiatValueEth}
+                id={'input1Eth'}
+              />
+            ) : (
+              <Input
+                value={input1 ? input1 : ''}
+                onUserInput={(e: string) => handleChangeInput1(e)}
+                onMax={() =>
+                  setInput1(formatBigNumber(poolDetails.balance1, poolDetails.decimals1, poolDetails.decimals1))
+                }
+                showCurrencySelector={true}
+                showMaxButton={true}
+                hideBalance={false}
+                currency={currency1}
+                fiatValue={fiatValueCurrency1}
+                id={'input1'}
+              />
+            )}
+          </Area>
+          <Area>
+            {is0Weth || is1Weth ? (
+              <>
+                <br></br>
+                Use WETH or ETH?
+                <br></br>
+                <label className="switch">
+                  <input type="checkbox" onClick={() => handleEthCheckbox()} />
+                  <div>
                     <br></br>
-                    <label className="switch">
-                      <input type="checkbox" onClick={() => handleEthCheckbox()} />
-                      <div>
-                        <br></br>
-                        {useEth ? 'ETH' : 'WETH'}
-                      </div>
-                    </label>
-                  </>
-                ) : (
-                  <></>
-                )}
-              </Area>
-              <Button onClick={() => handleTryInputs()}>Add Liquidity</Button>
-              {inputError ? <p style={{ color: 'red' }}>{inputError}</p> : <></>}
-              <br></br>
-              <br></br>
-              <a href={`/#/pools/remove/${props.pool.address}`}>remove liquidity</a>
-              <a href={'/#/pools'}>all pools</a>
-            </>
-          ) : (
-            <></>
-          )}
+                    {useEth ? 'ETH' : 'WETH'}
+                  </div>
+                </label>
+              </>
+            ) : (
+              <></>
+            )}
+          </Area>
+          {inputError ? <Area><p style={{color: 'red'}}>{inputError}</p></Area>:<Area><p>&nbsp;</p></Area>}
+          <Area>
+            {((isApproved0 && isApproved1) || noInputs) ? <></> : 
+              isApproved0 ?
+                <>
+                <Button onClick={() => handleApprove1()} disabled={isTransactionPending}>{isTransactionPending ? 'Pending Approval...': `Approve ${poolDetails.symbol1}`}</Button>
+                <br></br>
+                </>
+              :
+                <>
+                <Button onClick={() => handleApprove0()} disabled={isTransactionPending}>{isTransactionPending ? 'Pending Approval...': `Approve ${poolDetails.symbol0}`}</Button>
+                <br></br>
+                </>
+            }
+            <Button disabled={!addEnabled || showDetailsModal} onClick={() => handleTryInputs()}>Add Liquidity</Button>
+          </Area>
+          <br></br>
+          <br></br>
           <TransactionConfirmationModal
-            content={() => <p>hi!!!</p>}
+            content={() => <p></p>}
             isOpen={showTransactionModal}
             onDismiss={() => setShowTransactionModal(false)}
             hash={pendingTxHash ? pendingTxHash : undefined}
@@ -450,9 +495,10 @@ function AddLiquidityPanel(props: PoolParams) {
             pendingText={waitMessage ? waitMessage : ''}
           />
           {showDetailsModal ? (
-            <Popover>
+            <Modal isOpen={true} onDismiss={() => handleCancel()} maxHeight={90}>
+              <Column>
               <MarginLeft>
-                <h3>Add Liquidity</h3>
+                <h2>Add Liquidity</h2>
                 {`Max Input: ${input0 ? Number(input0).toFixed(3) : '0'} ${
                   useEth && is0Weth ? 'ETH' : poolDetails.symbol0
                 }, ${input1 ? Number(input1).toFixed(3) : '0'} ${useEth && is1Weth ? 'ETH' : poolDetails.symbol1}`}
@@ -468,38 +514,28 @@ function AddLiquidityPanel(props: PoolParams) {
                       }`
                   : 'no swap'}
                 <br></br>
-                {`Expected Deposit: ${expected0} ${poolDetails.symbol0}, ${expected1} ${poolDetails.symbol1}`}
+                {`Est. Deposit: ${expected0} ${poolDetails.symbol0}, ${expected1} ${poolDetails.symbol1}`}
                 <br></br>
-                {`Expected Mint: ${expectedMint} ${poolDetails.symbol} (${(
+                {`Est. Mint: ${expectedMint} ${poolDetails.symbol} (${(
                   (100 * Number(expectedMint)) /
                   (Number(formatBigNumber(poolDetails.supply, poolDetails.decimals, 8)) + Number(expectedMint))
                 ).toFixed(3)}% of supply)`}
               </MarginLeft>
-              <CenteredFlex>
-                {isApproved0 && isApproved1 ? (
-                  <ButtonLong onClick={() => handleDeposit()} disabled={isTransactionPending}>
-                    {!isTransactionPending ? 'Submit Transaction' : 'Pending...'}
-                  </ButtonLong>
-                ) : isApproved0 ? (
-                  <ButtonLong onClick={() => handleApprove1()} disabled={isTransactionPending}>
-                    {!isTransactionPending ? `Approve ${poolDetails.symbol1}` : 'Pending...'}
-                  </ButtonLong>
-                ) : (
-                  <ButtonLong onClick={() => handleApprove0()} disabled={isTransactionPending}>
-                    {!isTransactionPending ? `Approve ${poolDetails.symbol0}` : 'Pending...'}
-                  </ButtonLong>
-                )}
-              </CenteredFlex>
+              <br></br><br></br>
+              <Area>
+                <Button disabled={false} onClick={() => handleDeposit()}>Submit Transaction</Button>
+              </Area>
               <br></br>
-              <CenteredFlex>
-                <ButtonLong onClick={() => handleCancel()}>Cancel</ButtonLong>
-              </CenteredFlex>
-              <br></br>
-            </Popover>
+              <Area>
+                <Button disabled={false} onClick={() => handleCancel()}>Cancel</Button>
+              </Area>
+              <br></br><br></br>
+              </Column>
+            </Modal>
           ) : (
             <></>
           )}
-        </>
+        </Box>
       ) : (
         <></>
       )}
@@ -560,4 +596,28 @@ useEffect(() => {
     }
   }
   getFiatValues();
-}, [input0, currency0, usdPrice0, input1, currency1, usdPrice1, poolDetails]);*/
+}, [input0, currency0, usdPrice0, input1, currency1, usdPrice1, poolDetails]);
+
+              <Area>
+                <Row>
+                <strong>TVL:&nbsp;</strong>
+                {` ${formatBigNumber(poolDetails.supply0, poolDetails.decimals0, 2)} ${
+                  poolDetails.symbol0
+                } + ${formatBigNumber(poolDetails.supply1, poolDetails.decimals1, 2)} ${poolDetails.symbol1} `}
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                <strong>Supply:&nbsp;</strong>
+                {` ${formatBigNumber(poolDetails.supply, poolDetails.decimals, 4)} ${poolDetails.symbol}`}
+                </Row>
+              </Area>
+              <br></br>
+              <Area>
+                <Row>
+                <strong>Your Position:&nbsp;</strong>
+                {` ${formatBigNumber(poolDetails.balancePool, poolDetails.decimals, 4)} ${poolDetails.symbol}`}
+                &nbsp;&nbsp;&nbsp;
+                {`(${formatBigNumber(poolDetails.share0, poolDetails.decimals0, 2)} ${
+                  poolDetails.symbol0
+                } + ${formatBigNumber(poolDetails.share1, poolDetails.decimals1, 2)} ${poolDetails.symbol1})`}
+                </Row>
+              </Area>
+*/
