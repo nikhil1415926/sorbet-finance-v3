@@ -40,9 +40,8 @@ export const Row = styled.div`
   justify-content: space-between;
 `;
 
-export const Button = styled(ButtonPink)<{disabled?: boolean}>`
+export const Button = styled(ButtonPink)`
   width: 97%;
-  background-color: ${({ disabled }) => (disabled ? 'grey':'#2172E5')};
 `
 
 export const MarginLeft = styled.div`
@@ -508,10 +507,10 @@ function AddLiquidityPanel(props: PoolParams) {
                   ? depositParams[3]
                     ? `${formatBigNumber(depositParams[4], poolDetails.decimals0, 3)} ${
                         useEth && is0Weth ? 'ETH' : poolDetails.symbol0
-                      }`
+                      } for ${(Number(expected1) - Number(input1 ? input1 : '0')).toFixed(3)} ${poolDetails.symbol1}`
                     : `${formatBigNumber(depositParams[4], poolDetails.decimals1, 3)} ${
                         useEth && is1Weth ? 'ETH' : poolDetails.symbol1
-                      }`
+                      } for ${(Number(expected0) - Number(input0 ? input0 : '0')).toFixed(3)} ${poolDetails.symbol0}`
                   : 'no swap'}
                 <br></br>
                 {`Est. Deposit: ${expected0} ${poolDetails.symbol0}, ${expected1} ${poolDetails.symbol1}`}
@@ -598,26 +597,26 @@ useEffect(() => {
   getFiatValues();
 }, [input0, currency0, usdPrice0, input1, currency1, usdPrice1, poolDetails]);
 
-              <Area>
-                <Row>
-                <strong>TVL:&nbsp;</strong>
-                {` ${formatBigNumber(poolDetails.supply0, poolDetails.decimals0, 2)} ${
-                  poolDetails.symbol0
-                } + ${formatBigNumber(poolDetails.supply1, poolDetails.decimals1, 2)} ${poolDetails.symbol1} `}
-                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                <strong>Supply:&nbsp;</strong>
-                {` ${formatBigNumber(poolDetails.supply, poolDetails.decimals, 4)} ${poolDetails.symbol}`}
-                </Row>
-              </Area>
-              <br></br>
-              <Area>
-                <Row>
-                <strong>Your Position:&nbsp;</strong>
-                {` ${formatBigNumber(poolDetails.balancePool, poolDetails.decimals, 4)} ${poolDetails.symbol}`}
-                &nbsp;&nbsp;&nbsp;
-                {`(${formatBigNumber(poolDetails.share0, poolDetails.decimals0, 2)} ${
-                  poolDetails.symbol0
-                } + ${formatBigNumber(poolDetails.share1, poolDetails.decimals1, 2)} ${poolDetails.symbol1})`}
-                </Row>
-              </Area>
+<Area>
+  <Row>
+  <strong>TVL:&nbsp;</strong>
+  {` ${formatBigNumber(poolDetails.supply0, poolDetails.decimals0, 2)} ${
+    poolDetails.symbol0
+  } + ${formatBigNumber(poolDetails.supply1, poolDetails.decimals1, 2)} ${poolDetails.symbol1} `}
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+  <strong>Supply:&nbsp;</strong>
+  {` ${formatBigNumber(poolDetails.supply, poolDetails.decimals, 4)} ${poolDetails.symbol}`}
+  </Row>
+</Area>
+<br></br>
+<Area>
+  <Row>
+  <strong>Your Position:&nbsp;</strong>
+  {` ${formatBigNumber(poolDetails.balancePool, poolDetails.decimals, 4)} ${poolDetails.symbol}`}
+  &nbsp;&nbsp;&nbsp;
+  {`(${formatBigNumber(poolDetails.share0, poolDetails.decimals0, 2)} ${
+    poolDetails.symbol0
+  } + ${formatBigNumber(poolDetails.share1, poolDetails.decimals1, 2)} ${poolDetails.symbol1})`}
+  </Row>
+</Area>
 */
