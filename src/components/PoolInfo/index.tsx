@@ -69,7 +69,7 @@ const ButtonMedium = styled(ButtonPink)`
 `;
 
 const InnerBox = styled.div`
-  background-color: #2C2F36;
+  background-color: ${({ theme }) => theme.bg2};
   border-radius: 0.5rem;
   border: 1px solid #7d7f7c;
 `;
