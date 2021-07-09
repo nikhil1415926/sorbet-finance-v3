@@ -162,7 +162,13 @@ function AddLiquidityPanel(props: PoolParams) {
     if (token1 && guniRouter && poolDetails) {
       setShowTransactionModal(true)
       setWaitMessage(`Approve ${poolDetails.symbol1}`)
-      const tx = await token1.approve(guniRouter.address, MAX_UINT)
+      let tx;
+      try {
+        tx = await token1.approve(guniRouter.address, MAX_UINT)
+      } catch(_) {
+        setShowTransactionModal(false);
+        return;
+      }
       setPendingTxHash(tx.hash)
       setIsTransactionPending(true)
       await tx.wait()
@@ -180,19 +186,24 @@ function AddLiquidityPanel(props: PoolParams) {
       let tx
       setShowTransactionModal(true)
       setWaitMessage(`Deposit ${useEth && is0Weth ? 'ETH' : poolDetails.symbol0} and/or ${useEth && is1Weth ? 'ETH' : poolDetails.symbol1} liquidity and mint G-UNI`)
-      if (depositProtocol == 'addLiquidity') {
-        tx = await guniRouter.addLiquidity(...depositParams)
-      } else if (depositProtocol == 'addLiquidityETH') {
-        tx = await guniRouter.addLiquidityETH(...depositParams, {
-          value: is0Weth ? depositParams[1] : depositParams[2],
-        })
-      } else if (depositProtocol == 'rebalanceAndAddLiquidity') {
-        tx = await guniRouter.rebalanceAndAddLiquidity(...depositParams)
-      } else if (depositProtocol == 'rebalanceAndAddLiquidityETH') {
-        tx = await guniRouter.rebalanceAndAddLiquidityETH(...depositParams, {
-          value: is0Weth ? depositParams[1] : depositParams[2],
-        })
-      } else {
+      try {
+        if (depositProtocol == 'addLiquidity') {
+          tx = await guniRouter.addLiquidity(...depositParams)
+        } else if (depositProtocol == 'addLiquidityETH') {
+          tx = await guniRouter.addLiquidityETH(...depositParams, {
+            value: is0Weth ? depositParams[1] : depositParams[2],
+          })
+        } else if (depositProtocol == 'rebalanceAndAddLiquidity') {
+          tx = await guniRouter.rebalanceAndAddLiquidity(...depositParams)
+        } else if (depositProtocol == 'rebalanceAndAddLiquidityETH') {
+          tx = await guniRouter.rebalanceAndAddLiquidityETH(...depositParams, {
+            value: is0Weth ? depositParams[1] : depositParams[2],
+          })
+        } else {
+          setShowTransactionModal(false)
+          return
+        }
+      } catch(_) {
         setShowTransactionModal(false)
         return
       }

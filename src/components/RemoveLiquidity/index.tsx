@@ -60,7 +60,13 @@ function RemoveLiquidityPanel(props: PoolParams) {
     if (guniPool && guniRouter && poolDetails) {
       setShowTransactionModal(true);
       setWaitMessage(`Approve G-UNI`);
-      const tx = await guniPool.approve(guniRouter.address, MAX_UINT);
+      let tx;
+      try {
+        tx = await guniPool.approve(guniRouter.address, MAX_UINT)
+      } catch(_) {
+        setShowTransactionModal(false);
+        return;
+      }
       setPendingTxHash(tx.hash);
       setIsTransactionPending(true);
       await tx.wait();
@@ -76,10 +82,15 @@ function RemoveLiquidityPanel(props: PoolParams) {
       let tx;
       setShowTransactionModal(true);
       setWaitMessage(`Burn G-UNI and remove ${useEth && is0Weth ? 'ETH' : poolDetails.symbol0}/${useEth && is1Weth ? 'ETH' : poolDetails.symbol1} liquidity`);
-      if (useEth && (is0Weth || is1Weth)) {
-        tx = await guniRouter.removeLiquidityETH(...burnParams)
-      } else {
-        tx = await guniRouter.removeLiquidity(...burnParams)
+      try {
+        if (useEth && (is0Weth || is1Weth)) {
+          tx = await guniRouter.removeLiquidityETH(...burnParams)
+        } else {
+          tx = await guniRouter.removeLiquidity(...burnParams)
+        }
+      } catch(_) {
+        setShowTransactionModal(false)
+        return
       }
       setPendingTxHash(tx.hash);
       setIsTransactionPending(true);
