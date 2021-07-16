@@ -1,43 +1,44 @@
-import React, { useState, useEffect } from 'react'
-import type { FC } from 'react';
-import { useGUniFactoryContract } from 'hooks/useContract'
+import React from 'react'
 import PoolInfo from '../../components/PoolInfo';
+import { useGUniFactoryContract } from 'hooks/useContract'
+import usePromise from 'hooks/usePromise';
 import { Box, Title, List } from './styled';
 
 export type PoolParam = {
   address: string;
 }
 
-const PoolList: FC = () => {
-  const [pools, setPools] = useState<PoolParam[]>([]);
+const PoolList: React.FC = () => {
   const guniFactory = useGUniFactoryContract();
-  useEffect(() => {
-    const getPools = async () => {
-      if (guniFactory) {
-        const r = await guniFactory.getGelatoPools();
-        const foundPools = [];
-        for (let i=0; i<r.length; i++) {
-          foundPools.push({address: r[i]});
-        }
-        setPools(foundPools);
-      }
-    }
-    getPools();
-  }, [guniFactory]);
+  const { status, data, error } = usePromise<PoolParam[]>(
+    () => guniFactory && guniFactory.getGelatoPools(), [guniFactory]);
+
+  const LOADING_STATUS = status === 'pending' || status === 'init';
+  const ERROR_STATUS = status === 'rejected';
+
+  if(LOADING_STATUS) {
+    return <p> Loading Now ...</p>
+  } else if(ERROR_STATUS) {
+    console.log(error);
+    return <p>Issue occured while fetching</p>
+  } else {
+    return (
+      <List>
+        {data && data.map((pool, index) => (
+          <PoolInfo key={index} address={pool} />
+        ))}
+      </List>
+    )  
+  }
+}
+
+const PoolListContainer = () => {
   return (
     <Box>
       <Title>G-UNI Pools</Title>
-      {pools.length > 0 ?
-        <List>
-            {pools.map(function(pool, index){
-                return <PoolInfo key={index} address={pool.address} />;
-              })}
-        </List>
-      :
-        <></>
-      }
+      <PoolList />
     </Box>
   )
 }
 
-export default PoolList;
+export default PoolListContainer;
