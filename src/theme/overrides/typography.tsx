@@ -1,5 +1,5 @@
 import React from 'react';
-import { Text, TextProps, Heading, HeadingProps } from 'rebass'
+import { Text, TextProps } from 'rebass'
 import styled from 'styled-components'
 import { Colors } from '../styled'
 
@@ -25,7 +25,7 @@ export const TYPE = {
     return <TextWrapper fontWeight={500} fontSize={[14, 18]} color={'heading3'} {...props} />
   },
   heading6(props: TextProps) {
-    return <TextWrapper fontWeight={500} fontSize={[14, 18]} color={'heading3'} {...props} />
+    return <TextWrapper fontWeight={700} fontSize={[16, 18]} color={'heading6'} {...props} />
   },
   description(props: TextProps) {
     return <TextWrapper fontWeight={400} fontSize={[13, 16]} color={'text7'} {...props} />

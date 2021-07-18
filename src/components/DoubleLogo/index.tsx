@@ -7,7 +7,7 @@ const Wrapper = styled.div<{ margin: boolean; sizeraw: number }>`
   position: relative;
   display: flex;
   flex-direction: row;
-  margin-left: ${({ sizeraw, margin }) => margin && (sizeraw / 3 + 8).toString() + 'px'};
+  margin-right: ${({ sizeraw, margin }) => margin && (sizeraw / 3 + 18).toString() + 'px'};
 `
 
 export interface DoubleCurrencyLogoProps {
@@ -22,7 +22,7 @@ const HigherLogo = styled(CurrencyLogo)`
 `
 const CoveredLogo = styled(CurrencyLogo)<{ sizeraw: number }>`
   position: absolute;
-  left: ${({ sizeraw }) => '-' + (sizeraw / 2).toString() + 'px'} !important;
+  left: ${({ sizeraw }) => (sizeraw / 11 * 7).toString() + 'px'} !important;
 `
 
 export default function DoubleCurrencyLogo({

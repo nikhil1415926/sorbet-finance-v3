@@ -8,9 +8,14 @@ export default function colors(darkMode: boolean): Colors {
   const GNUI_STYLES = {
     red4: '#FF017A',
     heading3: darkMode ? '#FFFFF' : '1EEEEE',
+    heading6: darkMode ? '#FFFFFF': '#212429',
     text6: darkMode? '#FFFFFF' : '#565A69',
     text7: darkMode? '#FFFFFF' : '#868686',
-    blue3: '#0F709F'
+    blue3: '#0F709F',
+
+    bg7: darkMode ? '#212429' : '#FFFFFF',
+
+    border: darkMode? '#2C2F36' : '#E5E5E5'
   }
 
   return {

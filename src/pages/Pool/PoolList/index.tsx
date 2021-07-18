@@ -3,6 +3,8 @@ import { useGUniFactoryContract } from 'hooks/useContract'
 import usePromise from 'hooks/usePromise';
 import { TYPE, GlobalLink } from 'theme'
 import { Layout } from '../pool.styled';
+import PoolItem from '../components/PoolItem';
+
 
 export type PoolParam = {
   address: string;
@@ -37,7 +39,12 @@ const PoolListContainer = () => {
         <br/>
         More info&nbsp; 
        <GlobalLink href={'https://google.com'}>here</GlobalLink>
+       <PoolItem
+          token0={'ETH'}
+          token1={'ETH'}
+        />
       </TYPE.description>
+      
     </Layout>
   )
 }

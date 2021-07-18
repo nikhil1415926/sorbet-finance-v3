@@ -5,10 +5,12 @@ export interface Colors {
 
   // GUNUI POOL
   heading3: Color
+  heading6: Color
   red4: Color
   text6: Color
   text7: Color
   blue3: Color
+  border: Color
 
   // base
   white: Color
@@ -29,6 +31,7 @@ export interface Colors {
   bg4: Color
   bg5: Color
   bg6: Color
+  bg7: Color
 
   modalBG: Color
   advancedBG: Color
