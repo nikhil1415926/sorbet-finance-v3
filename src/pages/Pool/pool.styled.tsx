@@ -5,6 +5,7 @@ export const Layout = styled.div`
   border-radius: 24px;
   width: 95vw;
   max-width: 500px;
+  min-height: 480px;
   padding: 24px 20px;
   box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.25);
 `;

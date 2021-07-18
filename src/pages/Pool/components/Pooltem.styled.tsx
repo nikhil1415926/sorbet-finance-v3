@@ -5,7 +5,7 @@ export const PoolItemLayout = styled.div`
   background-color: ${({ theme }) => theme.bg7};
   border: 1px solid ${({ theme }) => theme.border};
   border-radius: 5px;
-  padding: 0px 18px;
+  padding: 0px 16px;
 `;
 
 export const PoolItemHeader = styled.div<{isCollapsed: boolean}>`

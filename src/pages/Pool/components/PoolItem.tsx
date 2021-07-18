@@ -7,9 +7,7 @@ import { RowBetween, AutoRow } from 'components/Row';
 import { AutoColumn } from 'components/Column';
 import { 
   PoolItemLayout,
-  PoolItemHeader,
-  LogoWrapper,
-  PoolItemDetail,
+  PoolItemHeader
 } from './Pooltem.styled';
 import { useCurrency } from 'hooks/Tokens'
 interface PoolItemProps {

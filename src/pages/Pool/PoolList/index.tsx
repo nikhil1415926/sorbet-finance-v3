@@ -40,7 +40,7 @@ const PoolListContainer = () => {
         <br/>
         More info&nbsp; 
        <GlobalLink href={'https://google.com'}>here</GlobalLink>
-       <AutoColumn gap="md" style={{marginTop: '20px'}}>
+       <AutoColumn gap="md" style={{marginTop: '24px'}}>
           <PoolItem
             token0={'ETH'}
             token1={'ETH'}
