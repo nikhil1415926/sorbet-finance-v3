@@ -2,6 +2,7 @@ import React from 'react'
 import { useGUniFactoryContract } from 'hooks/useContract'
 import usePromise from 'hooks/usePromise';
 import { TYPE, GlobalLink } from 'theme'
+import { AutoColumn } from 'components/Column';
 import { Layout } from '../pool.styled';
 import PoolItem from '../components/PoolItem';
 
@@ -39,10 +40,16 @@ const PoolListContainer = () => {
         <br/>
         More info&nbsp; 
        <GlobalLink href={'https://google.com'}>here</GlobalLink>
-       <PoolItem
-          token0={'ETH'}
-          token1={'ETH'}
-        />
+       <AutoColumn gap="md" style={{marginTop: '20px'}}>
+          <PoolItem
+            token0={'ETH'}
+            token1={'ETH'}
+          />
+          <PoolItem
+            token0={'ETH'}
+            token1={'ETH'}
+          />
+        </AutoColumn>
       </TYPE.description>
       
     </Layout>

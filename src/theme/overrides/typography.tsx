@@ -19,7 +19,7 @@ export const TYPE = {
     return <TextWrapper fontWeight={600} fontSize={[13, 16]} color={'heading3'} {...props} />
   },
   heading4(props: TextProps) {
-    return <TextWrapper fontWeight={600} fontSize={[13, 16]} color={'heading3'} {...props} />
+    return <TextWrapper fontWeight={400} fontSize={[13, 16]} color={'heading3'} {...props} />
   },
   heading5(props: TextProps) {
     return <TextWrapper fontWeight={500} fontSize={[14, 18]} color={'heading3'} {...props} />

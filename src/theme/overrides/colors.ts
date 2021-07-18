@@ -5,9 +5,10 @@ const black = '#000000'
 
 export default function colors(darkMode: boolean): Colors {
 
-  const GNUI_STYLES = {
+  return {
+    // --- GNUI_STYLES ---
     red4: '#FF017A',
-    heading3: darkMode ? '#FFFFF' : '1EEEEE',
+    heading3: darkMode ? '#FFFFF' : '#1E1E1E',
     heading6: darkMode ? '#FFFFFF': '#212429',
     text6: darkMode? '#FFFFFF' : '#565A69',
     text7: darkMode? '#FFFFFF' : '#868686',
@@ -15,11 +16,8 @@ export default function colors(darkMode: boolean): Colors {
 
     bg7: darkMode ? '#212429' : '#FFFFFF',
 
-    border: darkMode? '#2C2F36' : '#E5E5E5'
-  }
+    border: darkMode? '#2C2F36' : '#E5E5E5',
 
-  return {
-    ...GNUI_STYLES,
     // base
     white,
     black,

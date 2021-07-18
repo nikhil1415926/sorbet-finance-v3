@@ -5,26 +5,12 @@ export const PoolItemLayout = styled.div`
   background-color: ${({ theme }) => theme.bg7};
   border: 1px solid ${({ theme }) => theme.border};
   border-radius: 5px;
-  padding: 11px 18px;
+  padding: 0px 18px;
 `;
 
 export const PoolItemHeader = styled.div<{isCollapsed: boolean}>`
-  padding: ${({isCollapsed}) => isCollapsed ? '0px 0px': '10px 0px'}
+  padding: ${({isCollapsed}) => isCollapsed ? '11px 0px': '11px 0px 12px'}
   display: flex;
   justify-content: space-between;
+  border-bottom: 0.5px solid ${({ theme, isCollapsed }) => !isCollapsed ? theme.border: 'none' };
 `
-
-export const LogoWrapper = styled.div`
-  display: flex;
-  align-items: center;
-`
-
-export const ButtonSmall = styled(ButtonPink)`
-  padding-top: 2px;
-  padding-bottom: 3px;
-  width: 97px;
-  font-weight: 600;
-  ${({ theme }) => theme.mediaWidth.upToExtraSmall`
-    font-size: 13px;
-  `}
-`;

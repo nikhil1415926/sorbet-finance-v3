@@ -429,3 +429,13 @@ export function ButtonRadioChecked({ active = false, children, ...rest }: { acti
     )
   }
 }
+
+export const ButtonSmall = styled(ButtonPink)`
+  padding-top: 0px;
+  padding-bottom: 3px;
+  width: 97px;
+  font-weight: 600;
+  ${({ theme }) => theme.mediaWidth.upToExtraSmall`
+    font-size: 13px;
+  `}
+`;
