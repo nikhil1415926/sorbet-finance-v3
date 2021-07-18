@@ -51,10 +51,10 @@ function Updaters() {
   )
 }
 
-function Gelato({ children }: { children?: React.ReactNode }) {
+export function Gelato({ children }: { children?: React.ReactNode }) {
   const { library, chainId, account } = useActiveWeb3React()
   return (
-    <GelatoProvider library={library} chainId={chainId} account={account ?? undefined} useDefaultTheme={false}>
+    <GelatoProvider library={library} chainId={chainId} account={account ?? undefined}>
       {children}
     </GelatoProvider>
   )
@@ -70,9 +70,7 @@ ReactDOM.render(
             <Updaters />
             <ThemedGlobalStyle />
             <HashRouter>
-              <Gelato>
-                <App />
-              </Gelato>
+              <App />
             </HashRouter>
           </ThemeProvider>
         </Provider>

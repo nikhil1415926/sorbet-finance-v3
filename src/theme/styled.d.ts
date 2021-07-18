@@ -2,6 +2,14 @@ import { FlattenSimpleInterpolation, ThemedCssFunction } from 'styled-components
 
 export type Color = string
 export interface Colors {
+
+  // GUNUI POOL
+  heading3: Color
+  red4: Color
+  text6: Color
+  text7: Color
+  blue3: Color
+
   // base
   white: Color
   black: Color

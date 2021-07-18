@@ -312,3 +312,21 @@ export const ExtraSmallOnly = styled.span`
     display: block;
   `};
 `
+
+// --- Link for GUNI POOLS ---
+export const GlobalLink = styled(ExternalLink)`
+  color: ${({ theme }) => theme.blue3};
+  
+  :hover {
+    text-decoration: underline;
+  }
+
+  :focus {
+    outline: none;
+    text-decoration: underline;
+  }
+
+  :active {
+    text-decoration: none;
+  }
+`

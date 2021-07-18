@@ -1,8 +1,8 @@
 import React from 'react'
-import PoolInfo from '../../components/PoolInfo';
 import { useGUniFactoryContract } from 'hooks/useContract'
 import usePromise from 'hooks/usePromise';
-import { Box, Title, List } from './styled';
+import { TYPE, GlobalLink } from 'theme'
+import { Layout } from '../pool.styled';
 
 export type PoolParam = {
   address: string;
@@ -21,23 +21,24 @@ const PoolList: React.FC = () => {
   } else if(ERROR_STATUS) {
     console.log(error);
     return <p>Issue occured while fetching</p>
-  } else {
+  } else {``
     return (
-      <List>
-        {data && data.map((pool, index) => (
-          <PoolInfo key={index} address={pool} />
-        ))}
-      </List>
+      <div>yes</div>
     )  
   }
 }
 
 const PoolListContainer = () => {
   return (
-    <Box>
-      <Title>G-UNI Pools</Title>
-      <PoolList />
-    </Box>
+    <Layout>
+      <TYPE.heading1 mb={3}>G-UNI Pools</TYPE.heading1>
+      <TYPE.description>
+        Automated Liquidity Provision Management on Uniswap v3. 
+        <br/>
+        More info&nbsp; 
+       <GlobalLink href={'https://google.com'}>here</GlobalLink>
+      </TYPE.description>
+    </Layout>
   )
 }
 

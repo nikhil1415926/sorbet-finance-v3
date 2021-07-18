@@ -1,5 +1,5 @@
 import React from 'react';
-import { Text, TextProps } from 'rebass'
+import { Text, TextProps, Heading, HeadingProps } from 'rebass'
 import styled from 'styled-components'
 import { Colors } from '../styled'
 
@@ -8,6 +8,29 @@ const TextWrapper = styled(Text)<{ color: keyof Colors }>`
 `
 
 export const TYPE = {
+  // --- GUNI STYLES --- 
+  heading1(props: TextProps) {
+    return <TextWrapper fontWeight={700} fontSize={[16, 18]} color={'red4'} {...props} />
+  },
+  heading2(props: TextProps) {
+    return <TextWrapper fontWeight={700} fontSize={[14, 16]} color={'white'} {...props} />
+  },
+  heading3(props: TextProps) {
+    return <TextWrapper fontWeight={600} fontSize={[13, 16]} color={'heading3'} {...props} />
+  },
+  heading4(props: TextProps) {
+    return <TextWrapper fontWeight={600} fontSize={[13, 16]} color={'heading3'} {...props} />
+  },
+  heading5(props: TextProps) {
+    return <TextWrapper fontWeight={500} fontSize={[14, 18]} color={'heading3'} {...props} />
+  },
+  heading6(props: TextProps) {
+    return <TextWrapper fontWeight={500} fontSize={[14, 18]} color={'heading3'} {...props} />
+  },
+  description(props: TextProps) {
+    return <TextWrapper fontWeight={400} fontSize={[13, 16]} color={'text7'} {...props} />
+  },
+  // --- UNISWAP STYLES ---
   main(props: TextProps) {
     return <TextWrapper fontWeight={500} color={'text2'} {...props} />
   },
@@ -57,3 +80,4 @@ export const TYPE = {
     return <TextWrapper fontWeight={500} color={error ? 'red1' : 'text2'} {...props} />
   },
 }
+

@@ -14,10 +14,13 @@ import TransactionConfirmationModal from 'components/TransactionConfirmationModa
 //import useUSDCPrice from 'hooks/useUSDCPrice'
 //import { useTranslation } from 'react-i18next'
 import { Area, Button, MarginLeft, Column, Row, Back, MAX_UINT, Input } from '../AddLiquidity'
-import {Box, Title} from 'pages/Pools'
 import Modal from 'components/Modal'
 import '../AddLiquidity/toggle.css';
 import { ethers } from 'ethers';
+
+import styled from 'styled-components';
+const Box = styled.div``;
+const Title = styled.div``;
 
 function RemoveLiquidityPanel(props: PoolParams) {
   const [poolDetails, setPoolDetails] = useState<PoolDetails|null>();
