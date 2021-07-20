@@ -3,9 +3,9 @@ import { useGUniFactoryContract } from 'hooks/useContract'
 import usePromise from 'hooks/usePromise'
 import { TYPE, GlobalLink } from 'theme'
 import { AutoColumn } from 'components/Column'
+import Loader from 'components/Loader';
 import PoolLayout from '../components/PoolLayout'
 import PoolItem from '../components/PoolItem'
-
 
 export type PoolParam = {
   address: string;
@@ -20,13 +20,26 @@ const PoolList: React.FC = () => {
   const ERROR_STATUS = status === 'rejected';
 
   if(LOADING_STATUS) {
-    return <p> Loading Now ...</p>
+    return (
+      <div style={{marginTop: '48px', textAlign: 'center'}}>
+        <Loader size="180px"/>
+      </div>
+    )
   } else if(ERROR_STATUS) {
     console.log(error);
     return <p>Issue occured while fetching</p>
-  } else {``
+  } else {
     return (
-      <div>yes</div>
+      <AutoColumn gap="md" style={{marginTop: '24px'}}>
+        <PoolItem
+          token0={'ETH'}
+          token1={'ETH'}
+        />
+        <PoolItem
+          token0={'ETH'}
+          token1={'ETH'}
+        />
+      </AutoColumn>
     )  
   }
 }
@@ -39,16 +52,7 @@ const PoolListContainer = () => {
         Automated Liquidity Provision Management on Uniswap v3. 
         More info&nbsp; 
        <GlobalLink href={'https://google.com'}>here</GlobalLink>
-       <AutoColumn gap="md" style={{marginTop: '24px'}}>
-          <PoolItem
-            token0={'ETH'}
-            token1={'ETH'}
-          />
-          <PoolItem
-            token0={'ETH'}
-            token1={'ETH'}
-          />
-        </AutoColumn>
+       <PoolList/>
       </TYPE.description>
     </PoolLayout>
   )
