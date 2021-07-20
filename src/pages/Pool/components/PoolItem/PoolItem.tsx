@@ -42,8 +42,8 @@ export default function PoolItem({ token0, token1 }: PoolItemProps) {
       </PoolItemHeader>
       {!isCollapsed && (
         <AutoColumn 
-          gap="sm"
-          style={{padding: '10px 3px 16px'}}
+          gap="18px"
+          style={{padding: '18px 3px 21px'}}
         >
           <RowBetween>
             <TYPE.heading4>Total Value (in US Dollar)</TYPE.heading4>

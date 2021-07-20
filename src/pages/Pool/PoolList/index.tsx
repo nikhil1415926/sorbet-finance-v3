@@ -21,8 +21,8 @@ const PoolList: React.FC = () => {
 
   if(LOADING_STATUS) {
     return (
-      <div style={{marginTop: '48px', textAlign: 'center'}}>
-        <Loader size="180px"/>
+      <div style={{margin: '36px 0 24px', textAlign: 'center'}}>
+        <Loader size="180px" strokeWidth={1} />
       </div>
     )
   } else if(ERROR_STATUS) {
