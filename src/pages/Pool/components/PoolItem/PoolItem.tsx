@@ -1,5 +1,4 @@
 import React, { useState, useCallback } from 'react'
-import { Box, Flex } from 'rebass'
 import { TYPE } from 'theme'
 import DoubleLogo from 'components/DoubleLogo'
 import { ButtonSmall } from 'components/Button'
@@ -21,15 +20,15 @@ export default function PoolItem({ token0, token1 }: PoolItemProps) {
   const currency0 = useCurrency(token0);
   const currency1 = useCurrency(token1);
 
-  const buttonText = isCollapsed ? 'Show': 'Hide'
-
   const handleClick = useCallback(() => {
     setCollapsed(!isCollapsed);
   }, [isCollapsed])
 
+  const buttonText = isCollapsed ? 'Show': 'Hide';
+
   return (
     <PoolItemLayout>
-      <PoolItemHeader isCollapsed={isCollapsed}>
+      <PoolItemHeader isCollapsed={isCollapsed} onClick={handleClick}>
         <AutoRow>
           <DoubleLogo
             currency0={currency0 || undefined}

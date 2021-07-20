@@ -1,5 +1,4 @@
 import styled from 'styled-components'
-import { ButtonPink } from 'components/Button'
 
 export const PoolItemLayout = styled.div`
   background-color: ${({ theme }) => theme.bg7};

@@ -1,10 +1,10 @@
 import React from 'react'
 import { useGUniFactoryContract } from 'hooks/useContract'
-import usePromise from 'hooks/usePromise';
+import usePromise from 'hooks/usePromise'
 import { TYPE, GlobalLink } from 'theme'
-import { AutoColumn } from 'components/Column';
-import { Layout } from '../pool.styled';
-import PoolItem from '../components/PoolItem';
+import { AutoColumn } from 'components/Column'
+import PoolLayout from '../components/PoolLayout'
+import PoolItem from '../components/PoolItem'
 
 
 export type PoolParam = {
@@ -33,11 +33,10 @@ const PoolList: React.FC = () => {
 
 const PoolListContainer = () => {
   return (
-    <Layout>
+    <PoolLayout>
       <TYPE.heading1 mb={3}>G-UNI Pools</TYPE.heading1>
       <TYPE.description>
         Automated Liquidity Provision Management on Uniswap v3. 
-        <br/>
         More info&nbsp; 
        <GlobalLink href={'https://google.com'}>here</GlobalLink>
        <AutoColumn gap="md" style={{marginTop: '24px'}}>
@@ -51,8 +50,7 @@ const PoolListContainer = () => {
           />
         </AutoColumn>
       </TYPE.description>
-      
-    </Layout>
+    </PoolLayout>
   )
 }
 
