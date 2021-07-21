@@ -1,10 +1,11 @@
 import React from 'react';
+import { TYPE } from 'theme';
 
 const PoolOverview : React.FC = () => {
   return (
-    <div>
-      Pool Over view
-    </div>
+    <>
+      <TYPE.heading1 mb={3} style={{textAlign: 'center'}}>USDC/DAI Pool Overview</TYPE.heading1>
+    </>
   )
 };
 

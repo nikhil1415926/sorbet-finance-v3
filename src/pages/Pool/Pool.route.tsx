@@ -15,7 +15,7 @@ function PoolRoute() {
     <PoolLayout>
       <Switch>
         <Route exact path={path} component={PoolList} />
-        <Route path={`${path}/:topicId`} component={PoolOverview} />
+        <Route path={`${path}/:address`} component={PoolOverview} />
         {/* <Route exact strict path="/pools/:address/add" component={AddLiquidity} /> */}
         {/* <Route exact strict path="/pools/:address/remove" component={RemoveLiquidity} /> */}
       </Switch>
