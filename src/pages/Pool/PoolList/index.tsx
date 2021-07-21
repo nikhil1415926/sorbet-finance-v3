@@ -6,7 +6,7 @@ import { AutoColumn } from 'components/Column'
 import Loader from 'components/Loader';
 import PoolLayout from '../components/PoolLayout'
 import PoolItem from '../components/PoolItem'
-import { PoolPtr } from '../Pool'
+import { PoolPtr } from '../pool'
 
 const PoolList: React.FC = () => {
   const guniFactory = useGUniFactoryContract();
