@@ -50,6 +50,7 @@ export default function useUSDCPrice(currency?: Currency): Price<Currency, Token
       const { numerator, denominator } = v2USDCTrade.route.midPrice
       return new Price(currency, USDC, denominator, numerator)
     }
+
     // } else if (v3USDCTrade.state === V3TradeState.VALID && v3USDCTrade.trade) {
     //   const { numerator, denominator } = v3USDCTrade.trade.route.midPrice
     //   return new Price(currency, USDC, denominator, numerator)
@@ -63,6 +64,10 @@ export function useUSDCValue(currencyAmount: CurrencyAmount<Currency> | undefine
   const price = useUSDCPrice(currencyAmount?.currency)
 
   return useMemo(() => {
+    if (currencyAmount && currencyAmount.currency.symbol === 'USDC') {
+      return currencyAmount as CurrencyAmount<Token>
+    }
+
     if (!price || !currencyAmount) return null
     try {
       return price.quote(currencyAmount)

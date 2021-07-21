@@ -4,6 +4,7 @@
   "homepage": ".",
   "private": true,
   "devDependencies": {
+    "@apollo/client": "^3.3.21",
     "@emotion/core": "^11.0.0",
     "@ethersproject/experimental": "^5.0.1",
     "@gelatonetwork/limit-orders-react": "^1.0.4",
@@ -59,6 +60,7 @@
     "eslint-plugin-react": "^7.19.0",
     "eslint-plugin-react-hooks": "^4.0.0",
     "ethers": "^5.0.7",
+    "graphql": "^15.5.1",
     "i18next": "^15.0.9",
     "i18next-browser-languagedetector": "^3.0.1",
     "i18next-xhr-backend": "^2.0.1",
@@ -109,7 +111,7 @@
     "workbox-strategies": "^6.1.0"
   },
   "resolutions": {
-    "@walletconnect/web3-provider": "1.4.2-rc.2",
+    "@walletconnect/web3-provider": "^1.4.1",
     "react": "^17.0.1",
     "react-dom": "^17.0.1",
     "styled-components": "^4.2.0"

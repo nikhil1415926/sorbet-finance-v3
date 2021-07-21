@@ -343,11 +343,8 @@ export default function Header() {
         <StyledNavLink id={`limit-order-nav-link`} to={'/limit-order'}>
           Limit Orders
         </StyledNavLink>
-        <StyledNavLink id={`dca-nav-link`} to={'/dca'}>
-          DCA (soon)
-        </StyledNavLink>
         <StyledNavLink id={`pools-nav-link`} to={'/pools'}>
-          Pools (soon)
+          Pools
         </StyledNavLink>
       </HeaderLinks>
       <HeaderControls>
