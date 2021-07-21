@@ -12,6 +12,7 @@ export interface Colors {
   text7: Color
   blue3: Color
   border: Color
+  backIcon: Color
 
   // base
   white: Color

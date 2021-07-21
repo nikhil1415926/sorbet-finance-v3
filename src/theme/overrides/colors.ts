@@ -18,6 +18,7 @@ export default function colors(darkMode: boolean): Colors {
     bg7: darkMode ? '#212429' : '#FFFFFF',
 
     border: darkMode? '#2C2F36' : '#E5E5E5',
+    backIcon: darkMode? '#FFFFFF': '#525252',
 
     // base
     white,
