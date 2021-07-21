@@ -342,7 +342,7 @@ function AddLiquidityPanel(props: PoolParams) {
             const res = await guniPool.getMintAmounts(in0, in1)
             setExpected0(formatBigNumber(res[0], poolDetails.decimals0))
             setExpected1(formatBigNumber(res[1], poolDetails.decimals1))
-            setExpectedMint(formatBigNumber(res[2], poolDetails.decimals))
+            setExpectedMint(formatBigNumber(res[2], poolDetails.decimals, 12))
             setDepositProtocol(useEth && (is0Weth || is1Weth) ? 'addLiquidityETH' : 'addLiquidity')
             setDepositParams([guniPool.address, in0, in1, 0, 0, account])
           } else {
@@ -375,7 +375,7 @@ function AddLiquidityPanel(props: PoolParams) {
               const res2 = await guniPool.getMintAmounts(new0, new1)
               setExpected0(formatBigNumber(res2[0], poolDetails.decimals0))
               setExpected1(formatBigNumber(res2[1], poolDetails.decimals1))
-              setExpectedMint(formatBigNumber(res2[2], poolDetails.decimals))
+              setExpectedMint(formatBigNumber(res2[2], poolDetails.decimals, 12))
               setDepositProtocol(
                 useEth && (is0Weth || is1Weth) ? 'rebalanceAndAddLiquidityETH' : 'rebalanceAndAddLiquidity'
               )
@@ -384,7 +384,7 @@ function AddLiquidityPanel(props: PoolParams) {
               const res2 = await guniPool.getMintAmounts(in0, in1)
               setExpected0(formatBigNumber(res2[0], poolDetails.decimals0))
               setExpected1(formatBigNumber(res2[1], poolDetails.decimals1))
-              setExpectedMint(formatBigNumber(res2[2], poolDetails.decimals))
+              setExpectedMint(formatBigNumber(res2[2], poolDetails.decimals, 12))
               setDepositProtocol(useEth && (is0Weth || is1Weth) ? 'addLiquidityETH' : 'addLiquidity')
               setDepositParams([guniPool.address, in0, in1, 0, 0, account])
             }
@@ -528,9 +528,9 @@ function AddLiquidityPanel(props: PoolParams) {
                 <br></br>
                 <strong>Est. Deposit:</strong>{` ${expected0} ${poolDetails.symbol0}, ${expected1} ${poolDetails.symbol1}`}
                 <br></br>
-                <strong>Est. Mint:</strong>{` ${expectedMint} ${poolDetails.symbol} (${(
+                <strong>Est. Mint:</strong>{` ${Number(expectedMint).toFixed(4)} ${poolDetails.symbol} (${(
                   (100 * Number(expectedMint)) /
-                  (Number(formatBigNumber(poolDetails.supply, poolDetails.decimals, 8)) + Number(expectedMint))
+                  (Number(formatBigNumber(poolDetails.supply, poolDetails.decimals, 10)) + Number(expectedMint))
                 ).toFixed(3)}% of supply)`}
                 <br></br>
                 <br></br>

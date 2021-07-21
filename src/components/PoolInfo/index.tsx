@@ -81,6 +81,9 @@ const ButtonSmall = styled(ButtonPink)`
 
 const ButtonMedium = styled(ButtonPink)`
   width: 40%;
+  @media only screen and (max-width: 500px) {
+    width: 33%;
+  }
 `;
 
 export const InnerBox = styled.div`
