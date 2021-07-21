@@ -430,7 +430,26 @@ export function ButtonRadioChecked({ active = false, children, ...rest }: { acti
   }
 }
 
-export const ButtonSmall = styled(ButtonPink)`
+export const ButtonSmall = styled(Base)`
+  background-color: ${({ theme }) => theme.red5};
+  color: white;
+
+  &:focus {
+    box-shadow: 0 0 0 1pt ${({ theme }) => darken(0.05, theme.red5)};
+    background-color: ${({ theme }) => darken(0.05, theme.red5)};
+  }
+  &:hover {
+    background-color: ${({ theme }) => darken(0.05, theme.red5)};
+  }
+  &:active {
+    box-shadow: 0 0 0 1pt ${({ theme }) => darken(0.1, theme.red5)};
+    background-color: ${({ theme }) => darken(0.1, theme.red5)};
+  }
+  &:disabled {
+    background-color: ${({ theme }) => theme.red5};
+    opacity: 50%;
+    cursor: auto;
+  }
   padding-top: 0px;
   padding-bottom: 3px;
   width: 97px;

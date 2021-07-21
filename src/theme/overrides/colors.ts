@@ -8,6 +8,7 @@ export default function colors(darkMode: boolean): Colors {
   return {
     // --- GNUI_STYLES ---
     red4: '#FF017A',
+    red5: '#ff007a',
     heading3: darkMode ? '#FFFFF' : '#1E1E1E',
     heading6: darkMode ? '#FFFFFF': '#212429',
     text6: darkMode? '#FFFFFF' : '#565A69',

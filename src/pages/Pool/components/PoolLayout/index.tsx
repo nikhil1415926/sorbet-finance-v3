@@ -19,8 +19,6 @@ const LayoutWrapper = styled.div`
   box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.25);
 `;
 
-
-
 export const PoweredByGelatoWrapper = styled.div`
   margin: 24px 0px 0px;
   text-align: center;
@@ -46,8 +44,6 @@ function PoweredByGelato() {
     </ExternalLink>
   )
 }
-
-
 interface LayoutProps {
   children? : React.ReactNode
 }

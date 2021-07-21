@@ -4,9 +4,10 @@ export type Color = string
 export interface Colors {
 
   // GUNUI POOL
+  red4: Color
+  red5: Color
   heading3: Color
   heading6: Color
-  red4: Color
   text6: Color
   text7: Color
   blue3: Color

@@ -6,14 +6,11 @@ import { AutoColumn } from 'components/Column'
 import Loader from 'components/Loader';
 import PoolLayout from '../components/PoolLayout'
 import PoolItem from '../components/PoolItem'
-
-export type PoolParam = {
-  address: string;
-}
+import { PoolPtr } from '../Pool'
 
 const PoolList: React.FC = () => {
   const guniFactory = useGUniFactoryContract();
-  const { status, data, error } = usePromise<PoolParam[]>(
+  const { status, data, error } = usePromise<PoolPtr[]>(
     () => guniFactory && guniFactory.getGelatoPools(), [guniFactory]);
 
   const LOADING_STATUS = status === 'pending' || status === 'init';
