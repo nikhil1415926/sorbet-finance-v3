@@ -4,7 +4,6 @@ import usePromise from 'hooks/usePromise'
 import { TYPE, GlobalLink } from 'theme'
 import { AutoColumn } from 'components/Column'
 import Loader from 'components/Loader';
-import PoolLayout from '../components/PoolLayout'
 import PoolItem from '../components/PoolItem'
 import { PoolPtr } from '../pool'
 
@@ -43,15 +42,15 @@ const PoolList: React.FC = () => {
 
 const PoolListContainer = () => {
   return (
-    <PoolLayout>
+    <>
       <TYPE.heading1 mb={3}>G-UNI Pools</TYPE.heading1>
       <TYPE.description>
         Automated Liquidity Provision Management on Uniswap v3. 
         More info&nbsp; 
        <GlobalLink href={'https://google.com'}>here</GlobalLink>
-       <PoolList/>
       </TYPE.description>
-    </PoolLayout>
+      <PoolList/>
+    </>
   )
 }
 

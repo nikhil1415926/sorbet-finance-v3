@@ -7,14 +7,13 @@ import Polling from '../components/Header/Polling'
 import Popups from '../components/Popups'
 import Web3ReactManager from '../components/Web3ReactManager'
 import ErrorBoundary from '../components/ErrorBoundary'
-// import AddLiquidity from '../components/AddLiquidity';
-// import RemoveLiquidity from '../components/RemoveLiquidity';
-import PoolList from './Pool/PoolList';
 // import PoweredByGelato from '../components/PoweredByGelato'
 import DarkModeQueryParamReader from '../theme/DarkModeQueryParamReader'
 import LimitOrder from './LimitOrder'
 import { RedirectPathToSwapOnly, RedirectToSwap } from './LimitOrder/redirects'
 import { ThemedBackground } from '../theme'
+import PoolRoute from './Pool/Pool.route';
+
 
 const AppWrapper = styled.div`
   display: flex;
@@ -72,10 +71,7 @@ export default function App() {
                 <Route exact strict path="/limit-order/:outputCurrency" component={RedirectToSwap} />
                 <Route exact strict path="/limit-order" component={LimitOrder} />
 
-                {/* --- Route for GUI Pools --- */} 
-                {/* <Route exact strict path="/pools/add/:address" component={AddLiquidity} /> */}
-                {/* <Route exact strict path="/pools/remove/:address" component={RemoveLiquidity} /> */}
-                <Route exact strict path="/pools" component={PoolList} />
+                <Route exact strict path="/pools" component={PoolRoute} />
 
                 <Route component={RedirectPathToSwapOnly} />
               </Switch>
