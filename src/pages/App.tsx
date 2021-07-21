@@ -71,7 +71,7 @@ export default function App() {
                 <Route exact strict path="/limit-order/:outputCurrency" component={RedirectToSwap} />
                 <Route exact strict path="/limit-order" component={LimitOrder} />
 
-                <Route exact strict path="/pools" component={PoolRoute} />
+                <Route path="/pools" component={PoolRoute} />
 
                 <Route component={RedirectPathToSwapOnly} />
               </Switch>

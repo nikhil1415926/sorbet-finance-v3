@@ -1,6 +1,6 @@
 import React from 'react';
 
-const PoolOverview = () => {
+const PoolOverview : React.FC = () => {
   return (
     <div>
       Pool Over view

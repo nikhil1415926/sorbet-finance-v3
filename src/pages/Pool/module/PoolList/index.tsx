@@ -4,8 +4,8 @@ import usePromise from 'hooks/usePromise'
 import { TYPE, GlobalLink } from 'theme'
 import { AutoColumn } from 'components/Column'
 import Loader from 'components/Loader';
-import PoolItem from '../components/PoolItem'
-import { PoolPtr } from '../pool'
+import PoolItem from '../../components/PoolItem'
+import { PoolPtr } from '../../pool'
 
 const PoolList: React.FC = () => {
   const guniFactory = useGUniFactoryContract();
