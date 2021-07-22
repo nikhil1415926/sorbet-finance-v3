@@ -5,6 +5,10 @@ export const PoolItemLayout = styled.div`
   border: 1px solid ${({ theme }) => theme.border};
   border-radius: 5px;
   padding: 0px 18px;
+  &:hover {
+    background-color: ${({ theme }) => theme.bgHover};
+    border-color: ${({ theme }) => theme.borderHover};
+  }
 `;
 
 export const PoolItemHeader = styled.div<{isCollapsed: boolean}>`

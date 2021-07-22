@@ -13,6 +13,8 @@ export interface Colors {
   blue3: Color
   border: Color
   backIcon: Color
+  bgHover: Color
+  borderHover: Color
 
   // base
   white: Color

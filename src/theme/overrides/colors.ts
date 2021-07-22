@@ -16,8 +16,10 @@ export default function colors(darkMode: boolean): Colors {
     blue3: '#0F709F',
 
     bg7: darkMode ? '#212429' : '#FFFFFF',
-
+    bgHover: darkMode? '#212429' : '#F7F8FA',
     border: darkMode? '#2C2F36' : '#E5E5E5',
+    borderHover: darkMode? '#C5C5C5' : '#E5E5E5',
+    
     backIcon: darkMode? '#FFFFFF': '#525252',
 
     // base
