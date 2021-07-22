@@ -30,6 +30,9 @@ export const TYPE = {
   description(props: TextProps) {
     return <TextWrapper fontWeight={400} fontSize={[13, 16]} color={'text7'} {...props} />
   },
+  button2(props: TextProps) {
+    return <TextWrapper fontWeight={400} fontSize={[13, 16]} color={'white'} {...props} />
+  },
   // --- UNISWAP STYLES ---
   main(props: TextProps) {
     return <TextWrapper fontWeight={500} color={'text2'} {...props} />
