@@ -1,9 +1,10 @@
-import React from 'react';
-import { TYPE } from 'theme';
-import { RowBetween } from 'components/Row';
-import { AutoColumn } from 'components/Column';
-import { PoolInfoBox } from './PoolOverView.styled';
-import BackBtn from '../../components/BackBtn/BackBtn';
+import React from 'react'
+import { TYPE } from 'theme'
+import { RowBetween } from 'components/Row'
+import { AutoColumn } from 'components/Column'
+import { PoolInfoBox } from './PoolOverView.styled'
+import BackBtn from '../../components/BackBtn
+import ShowPoolStatus from '../../components/ShowPoolStatus'
 
 const PoolOverview : React.FC = () => {
   return (
@@ -29,6 +30,7 @@ const PoolOverview : React.FC = () => {
           </RowBetween>
         </AutoColumn>
       </PoolInfoBox>
+      <ShowPoolStatus/>
     </>
   )
 };
