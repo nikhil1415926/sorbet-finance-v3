@@ -3,37 +3,41 @@ import { Link, LinkProps } from 'react-router-dom';
 import styled from 'styled-components'
 
 const StyledSVG = styled.svg`
-  height: 18px;
-  width: 18px;
+  height: 40px;
+  width: 40px;
+  fill: ${({ theme }) => theme.bg0 };
   path {
     stroke: ${({ stroke, theme }) => stroke ?? theme.backIcon};
   }
   ${({ theme }) => theme.mediaWidth.upToExtraSmall`
-    width: 16px;
-    height: 16px;
+    width: 32px;
+    height: 32px;
   `};
+
   &:hover {
-    background-color: #F00;
+    fill: ${({ theme }) => theme.iconHover };
   }
 `
 
 const BackIcon = () => {
   return (
-    <StyledSVG viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path 
-        d="M12 1L3 12L12 23"
-        strokeWidth="2.5" 
-        strokeLinecap="round" 
-        strokeLinejoin="round"
-      />
+    <StyledSVG viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="20" cy="20" r="20" />
+      <path d="M22.837 13.353L16 20.1899L22.837 27.0269" stroke="#525252" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
     </StyledSVG>
   )
 }
 
 const StyledLink = styled(Link)`
   position: absolute;
-  margin-left: 10px;
-  
+  margin-left: 4px;
+  margin-top: -9.5px;
+  ${({ theme }) => theme.mediaWidth.upToExtraSmall`
+    width: 16px;
+    height: 16px;
+    margin-top: -7.5px;
+    margin-left: 6px;
+`};
 `
 const BackBtn = (props: LinkProps) => (
   <StyledLink {...props}>

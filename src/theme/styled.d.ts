@@ -15,6 +15,7 @@ export interface Colors {
   backIcon: Color
   bgHover: Color
   borderHover: Color
+  iconHover: Color
 
   // base
   white: Color

@@ -13,7 +13,7 @@ const LayoutWrapper = styled.div`
   margin-top: 16px;
   padding: 24px 20px;
   width: 95vw;
-  max-width: 480px;
+  max-width: 500px;
   border-radius: 24px;
   background-color: ${({ theme }) => theme.bg0};
   box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.25);
