@@ -17,7 +17,6 @@ import {
   StyledQuestionHelper
 } from './ShowPoolStatus.styled'
 
-
 const ShowPoolStatus : React.FC = () => {
   const [isCollapsed, setCollpased] = useState<boolean>(true);
   const [viewType, setViewType] = useState<number>(0)

@@ -2,10 +2,12 @@ import React from 'react'
 import { TYPE } from 'theme'
 import { RowBetween } from 'components/Row'
 import { AutoColumn } from 'components/Column'
-import { PoolInfoBox } from './PoolOverView.styled'
+import { PoolInfoBox, Img, FixedSpan } from './PoolOverView.styled'
 import BackBtn from '../../components/BackBtn'
-import UpArrowBtn from '../../components/UpArrowBtn'
 import ShowPoolStatus from '../../components/ShowPoolStatus'
+import { ButtonMedium } from 'components/Button';
+import ImageAddLiquidity from  '../../../../assets/svg/add_liquidity.svg';
+import ImageRemoveLiquidity from '../../../../assets/svg/remove_liquidity.svg';
 
 const PoolOverview : React.FC = () => {
   return (
@@ -32,6 +34,29 @@ const PoolOverview : React.FC = () => {
         </AutoColumn>
       </PoolInfoBox>
       <ShowPoolStatus/>
+      <AutoColumn 
+        gap="18px"
+        style={{padding: '0px 18px', marginTop: '35px'}}
+      >
+        <RowBetween>
+          <TYPE.heading4>Your Pool Position</TYPE.heading4>
+          <TYPE.heading3>$ 10,000</TYPE.heading3>
+        </RowBetween>
+        <RowBetween>
+          <TYPE.heading4>Your Wallet Balance</TYPE.heading4>
+          <TYPE.heading3>2,500 USDC / 2,500 DAI</TYPE.heading3>
+        </RowBetween>
+      </AutoColumn>
+      <AutoColumn gap="20px" style={{marginTop: '25px'}}>
+        <ButtonMedium>
+          <Img src={ImageAddLiquidity}  />
+          <FixedSpan>Add Liquidity</FixedSpan>
+        </ButtonMedium>
+        <ButtonMedium>
+          <Img src={ImageRemoveLiquidity} />
+          <FixedSpan>Remove Liquidity</FixedSpan>
+        </ButtonMedium>
+      </AutoColumn>
     </>
   )
 };

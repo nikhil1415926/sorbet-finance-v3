@@ -458,3 +458,31 @@ export const ButtonSmall = styled(Base)`
     font-size: 13px;
   `}
 `;
+
+export const ButtonMedium = styled(Base)`
+  background-color: ${({ theme }) => theme.red5};
+  color: white;
+  font-size: 18px;
+  font-weight: 700;
+
+  &:focus {
+    box-shadow: 0 0 0 1pt ${({ theme }) => darken(0.05, theme.red5)};
+    background-color: ${({ theme }) => darken(0.05, theme.red5)};
+  }
+  &:hover {
+    background-color: ${({ theme }) => darken(0.05, theme.red5)};
+  }
+  &:active {
+    box-shadow: 0 0 0 1pt ${({ theme }) => darken(0.1, theme.red5)};
+    background-color: ${({ theme }) => darken(0.1, theme.red5)};
+  }
+  &:disabled {
+    background-color: ${({ theme }) => theme.red5};
+    opacity: 50%;
+    cursor: auto;
+  }
+ 
+  ${({ theme }) => theme.mediaWidth.upToExtraSmall`
+    font-size: 16px;
+  `}
+`;
