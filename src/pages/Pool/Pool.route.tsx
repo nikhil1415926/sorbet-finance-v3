@@ -1,12 +1,14 @@
-import React from "react";
+import React from "react"
 import {
   Switch,
   Route,
   useRouteMatch
-} from "react-router-dom";
-import PoolLayout  from "./components/PoolLayout";
+} from "react-router-dom"
+import PoolLayout  from "./components/PoolLayout"
 import PoolList from './module/PoolList';
-import PoolOverview from './module/PoolOverview';
+import PoolOverview from './module/PoolOverview'
+import AddLiquidity from './module/AddLiquidity'
+import RemoveLiquidity from './module/RemoveLiquidity'
 
 function PoolRoute() {
   const { path } = useRouteMatch();
@@ -15,9 +17,9 @@ function PoolRoute() {
     <PoolLayout>
       <Switch>
         <Route exact path={path} component={PoolList} />
-        <Route path={`${path}/:address`} component={PoolOverview} />
-        {/* <Route exact strict path="/pools/:address/add" component={AddLiquidity} /> */}
-        {/* <Route exact strict path="/pools/:address/remove" component={RemoveLiquidity} /> */}
+        <Route exact path={`${path}/:address`} component={PoolOverview} />
+        <Route exact path={`${path}/:address/add`} component={AddLiquidity} /> 
+        <Route exact path={`${path}/:address/remove`} component={RemoveLiquidity} />
       </Switch>
     </PoolLayout>
   );

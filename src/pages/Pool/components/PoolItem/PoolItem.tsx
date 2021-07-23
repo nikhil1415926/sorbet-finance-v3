@@ -32,7 +32,7 @@ export default function PoolItem({ token0, token1 }: PoolItemProps) {
 
   return (
     <Link 
-      to='/pools/eth-eth-pool-address'
+      to='/pools/0x23134123'
       style={{textDecoration: 'none'}}
     >
       <PoolItemLayout>

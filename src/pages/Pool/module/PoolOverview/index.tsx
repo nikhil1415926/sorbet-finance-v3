@@ -1,4 +1,5 @@
 import React from 'react'
+import { Link } from 'react-router-dom';
 import { TYPE } from 'theme'
 import { RowBetween } from 'components/Row'
 import { AutoColumn } from 'components/Column'
@@ -48,14 +49,18 @@ const PoolOverview : React.FC = () => {
         </RowBetween>
       </AutoColumn>
       <AutoColumn gap="20px" style={{marginTop: '25px'}}>
-        <ButtonMedium>
-          <Img src={ImageAddLiquidity}  />
-          <FixedSpan>Add Liquidity</FixedSpan>
-        </ButtonMedium>
-        <ButtonMedium>
-          <Img src={ImageRemoveLiquidity} />
-          <FixedSpan>Remove Liquidity</FixedSpan>
-        </ButtonMedium>
+        <Link to="/pools/ox23123/add" style={{textDecoration: 'none'}}>
+          <ButtonMedium>
+            <Img src={ImageAddLiquidity}  />
+            <FixedSpan>Add Liquidity</FixedSpan>
+          </ButtonMedium>
+        </Link>
+        <Link to="/pools/ox23123/remove" style={{textDecoration: 'none'}}>
+          <ButtonMedium>
+            <Img src={ImageRemoveLiquidity} />
+            <FixedSpan>Remove Liquidity</FixedSpan>
+          </ButtonMedium>
+        </Link>
       </AutoColumn>
     </>
   )
