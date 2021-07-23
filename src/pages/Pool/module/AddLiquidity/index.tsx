@@ -5,6 +5,7 @@ import { AutoColumn } from 'components/Column'
 import BackBtn from '../../components/BackBtn'
 import ShowPoolStatus from '../../components/ShowPoolStatus'
 import { ButtonMedium } from 'components/Button';
+import AddLiquidtyPanel from './AddLiquidity';
 
 import { PoolInfoBox } from './AddLiquidity.styled';
 
@@ -26,6 +27,7 @@ const AddLiquidity: React.FC = () => {
           </RowBetween>
         </AutoColumn>
       </PoolInfoBox>
+      <AddLiquidtyPanel />
     </>
   )
 };
