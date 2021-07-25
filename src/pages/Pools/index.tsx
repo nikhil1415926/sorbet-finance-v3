@@ -41,10 +41,13 @@ export default function ListPools() {
   useEffect(() => {
     const getPools = async () => {
       if (guniFactory) {
-        const r = await guniFactory.getGelatoPools();
+        const deployers = await guniFactory.getDeployers();
         const foundPools = [];
-        for (let i=0; i<r.length; i++) {
-          foundPools.push({address: r[i]});
+        for (let i=0; i<deployers.length; i++) {
+          const pools = await guniFactory.getPools(deployers[i])
+          for (let j=0; j< pools.length; j++) {
+            foundPools.push({address: pools[j]});
+          }
         }
         setPools(foundPools);
       }

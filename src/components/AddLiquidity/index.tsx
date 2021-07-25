@@ -348,7 +348,7 @@ function AddLiquidityPanel(props: PoolParams) {
           } else {
             const res = await guniResolver.getRebalanceParams(guniPool.address, in0, in1, 200)
             const [zeroForOne, swapAmount, swapThreshold] = res
-            if (swapAmount.gt(0)) {
+            if (swapAmount.gt(ethers.constants.Zero)) {
               const pool = new ethers.Contract(
                 await guniPool.pool(),
                 ['function fee() external view returns (uint24)'],
