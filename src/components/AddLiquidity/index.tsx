@@ -97,7 +97,8 @@ function AddLiquidityPanel(props: PoolParams) {
   const [showTransactionModal, setShowTransactionModal] = useState(false)
   const [poolData, setPoolData] = useState<any>()
   const [pendingTxHash, setPendingTxHash] = useState<string | null>()
-  const [useEth, setUseEth] = useState<boolean>(true)
+  /* eslint-disable  @typescript-eslint/no-unused-vars */
+  const [useEth, setUseEth] = useState<boolean>(false)
   /* eslint-disable  @typescript-eslint/no-unused-vars */
   const [swapAssets, setSwapAssets] = useState<boolean>(true)
 
@@ -132,10 +133,10 @@ function AddLiquidityPanel(props: PoolParams) {
   }
   /*const handleRebalanceCheckbox = () => {
     setSwapAssets(!swapAssets);
-  }*/
+  }
   const handleEthCheckbox = () => {
     setUseEth(!useEth)
-  }
+  }*/
   const handleApprove0 = async () => {
     setWaitMessage(null)
     setIsTransactionPending(false)
@@ -495,24 +496,6 @@ function AddLiquidityPanel(props: PoolParams) {
                 fiatValue={fiatValueCurrency1}
                 id={'input1'}
               />
-            )}
-          </Area>
-          <Area>
-            {is0Weth || is1Weth ? (
-              <>
-                <br></br>
-                Use WETH or ETH?
-                <br></br>
-                <label className="switch">
-                  <input type="checkbox" onClick={() => handleEthCheckbox()} />
-                  <div>
-                    <br></br>
-                    {useEth ? 'ETH' : 'WETH'}
-                  </div>
-                </label>
-              </>
-            ) : (
-              <></>
             )}
           </Area>
           {inputError ? <Area><p style={{color: 'red'}}>{inputError}</p></Area>:(expected0 && expected1) ? <></>:<Area><p>&nbsp;</p></Area>}

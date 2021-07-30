@@ -44,6 +44,8 @@ export type PoolDetails = {
   manager: string
   feesEarned0: BigNumber
   feesEarned1: BigNumber
+  lowerPrice: number
+  upperPrice: number
 }
 
 type APRType = {
@@ -276,6 +278,9 @@ export const fetchPoolDetails = async (poolData: any, guniPool: Contract, token0
       leftover1,
       currentBlock
     );
+    const factor = (10**decimals0)/(10**decimals1)
+    const lowerPrice = (1.0001**lowerTick)*factor
+    const upperPrice = (1.0001**upperTick)*factor
     return {
       name: name,
       symbol: "G-UNI",
@@ -300,6 +305,8 @@ export const fetchPoolDetails = async (poolData: any, guniPool: Contract, token0
       manager: poolData.manager,
       feesEarned0: feesEarned0,
       feesEarned1: feesEarned1,
+      lowerPrice: lowerPrice,
+      upperPrice: upperPrice
     }
   }
 
@@ -353,10 +360,13 @@ export default function PoolInfo(props: any) {
                 <strong>TVL ($):</strong>{` $${Number((Number(ethers.utils.formatUnits(poolDetails.supply0, poolDetails.decimals0.toString())) + Number(ethers.utils.formatUnits(poolDetails.supply1, poolDetails.decimals1.toString()))).toFixed(2)).toLocaleString('en-US')}`}
               </p>
               <p>
-                <strong>Fees Earned:</strong>{` ${Number(formatBigNumber(poolDetails.feesEarned0, poolDetails.decimals0, 4)).toLocaleString('en-US')} ${poolDetails.symbol0} + ${Number(formatBigNumber(poolDetails.feesEarned1, poolDetails.decimals1, 4)).toLocaleString('en-US')} ${poolDetails.symbol1}`}
+                <strong>Total Fees Earned:</strong>{` ${Number(formatBigNumber(poolDetails.feesEarned0, poolDetails.decimals0, 4)).toLocaleString('en-US')} ${poolDetails.symbol0} + ${Number(formatBigNumber(poolDetails.feesEarned1, poolDetails.decimals1, 4)).toLocaleString('en-US')} ${poolDetails.symbol1}`}
               </p>
               <p>
                 <strong>Fees APR:</strong>{` ${poolDetails.apr > 0 ? `~${(poolDetails.apr*100).toFixed(2)}%` : 'TBD'}`}
+              </p>
+              <p>
+                <strong>Position Range:</strong>{` ${poolDetails.lowerPrice.toFixed(4)} ${poolDetails.symbol1} - ${poolDetails.upperPrice.toFixed(4)} ${poolDetails.symbol1}`}
               </p>
               <p>
                 <strong>Your Share:</strong>{` ${Number(formatBigNumber(poolDetails.share0, poolDetails.decimals0, 2)).toLocaleString('en-US')} ${poolDetails.symbol0} + ${Number(formatBigNumber(poolDetails.share1, poolDetails.decimals1, 2)).toLocaleString('en-US')} ${poolDetails.symbol1}`}
