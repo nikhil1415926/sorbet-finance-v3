@@ -21,7 +21,7 @@ import { ReactComponent as Plus } from 'assets/images/plus-blue.svg'
 import './toggle.css'
 import { ethers } from 'ethers'
 import { useUSDCValue } from 'hooks/useUSDCPrice'
-import {Box, Title} from 'pages/Pools'
+import {Box, Title, fetchPools} from 'pages/Pools'
 
 export const Area = styled.div`
   display: flex;
@@ -95,6 +95,7 @@ function AddLiquidityPanel(props: PoolParams) {
   const [addEnabled, setAddEnabled] = useState<boolean>(false)
   const [isTransactionPending, setIsTransactionPending] = useState<boolean>(false)
   const [showTransactionModal, setShowTransactionModal] = useState(false)
+  const [poolData, setPoolData] = useState<any>()
   const [pendingTxHash, setPendingTxHash] = useState<string | null>()
   const [useEth, setUseEth] = useState<boolean>(true)
   /* eslint-disable  @typescript-eslint/no-unused-vars */
@@ -243,8 +244,15 @@ function AddLiquidityPanel(props: PoolParams) {
   useEffect(() => {
     const getPool = async () => {
       if (guniPool && token0 && token1) {
-        const details = await fetchPoolDetails(guniPool, token0, token1, account)
-        setPoolDetails(details)
+        const pools = await fetchPools();
+        for (let i=0; i<pools.length; i++) {
+          if (pools[i].address == guniPool.address.toLowerCase()) {
+            setPoolData(pools[i])
+            const details = await fetchPoolDetails(pools[i], guniPool, token0, token1, account)
+            setPoolDetails(details)
+            break
+          }
+        }
       }
       if (chainId) {
         if (WETH9[chainId].address == token0?.address) {
@@ -413,7 +421,7 @@ function AddLiquidityPanel(props: PoolParams) {
     setInput1(null)
     setExpectedMint(null)
     if (guniPool && token0 && token1) {
-      const details = await fetchPoolDetails(guniPool, token0, token1, account)
+      const details = await fetchPoolDetails(poolData, guniPool, token0, token1, account)
       setPoolDetails(details)
     }
   }

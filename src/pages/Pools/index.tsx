@@ -1,7 +1,8 @@
-import { useGUniFactoryContract } from 'hooks/useContract'
+//import { useGUniFactoryContract } from 'hooks/useContract'
 import React, {useState, useEffect} from 'react'
 import PoolInfo from '../../components/PoolInfo';
 import styled from "styled-components";
+import { ApolloClient, InMemoryCache, gql } from '@apollo/client';
 
 export type PoolParam = {
   address: string;
@@ -35,32 +36,73 @@ const List = styled.ul`
   }
 `;
 
-export default function ListPools() {
-  const [pools, setPools] = useState<PoolParam[]>([]);
-  const guniFactory = useGUniFactoryContract();
-  useEffect(() => {
-    const getPools = async () => {
-      if (guniFactory) {
-        const deployers = await guniFactory.getDeployers();
-        const foundPools = [];
-        for (let i=0; i<deployers.length; i++) {
-          const pools = await guniFactory.getPools(deployers[i])
-          for (let j=0; j< pools.length; j++) {
-            foundPools.push({address: pools[j]});
+export const fetchPools = async () => {
+  try {
+    const APIURL = "https://api.thegraph.com/subgraphs/name/gelatodigital/g-uni";
+
+    const obsQ = `
+      query {
+        pools {
+          id
+          blockCreated
+          manager
+          address
+          uniswapPool
+          positionId
+          token0
+          token1
+          feeTier
+          liquidity
+          lowerTick
+          upperTick
+          totalSupply
+          managerFee
+          lastTouchWithoutFees
+          supplySnapshots {
+            id
+            block
+            reserves0
+            reserves1
+          }
+          feeSnapshots {
+            id
+            block
+            feesEarned0
+            feesEarned1
           }
         }
-        setPools(foundPools);
       }
-    }
-    getPools();
-  }, [guniFactory]);
+    `;
+    
+    const client = new ApolloClient({
+      uri: APIURL,
+      cache: new InMemoryCache()
+    });
+    
+    const data = await client.query({
+      query: gql(obsQ)
+    })
+    return data.data.pools;
+  } catch(e) {
+    console.log("error fetching pools for subgraph:", e)
+    return []
+  }
+}
+
+export default function ListPools() {
+  const [poolsData, setPoolsData] = useState<any[]>([]);
+  useEffect(() => {
+    fetchPools().then((result) => {
+      setPoolsData(result);
+    });
+  }, []);
   return (
     <Box>
       <Title>G-UNI Pools</Title>
-      {pools.length > 0 ?
+      {poolsData.length > 0 ?
         <List>
-            {pools.map(function(pool, index){
-                return <PoolInfo key={index} address={pool.address} />;
+            {poolsData.map(function(poolData, index){
+                return <PoolInfo key={index} poolData={poolData} />;
               })}
         </List>
       :

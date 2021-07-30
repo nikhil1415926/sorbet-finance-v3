@@ -14,7 +14,7 @@ import TransactionConfirmationModal from 'components/TransactionConfirmationModa
 //import useUSDCPrice from 'hooks/useUSDCPrice'
 //import { useTranslation } from 'react-i18next'
 import { Area, Button, Row, Back, Input, MarginLeft } from '../AddLiquidity'
-import {Box, Title} from 'pages/Pools'
+import {Box, Title, fetchPools} from 'pages/Pools'
 import '../AddLiquidity/toggle.css';
 import { ethers } from 'ethers';
 
@@ -35,6 +35,7 @@ function RemoveLiquidityPanel(props: PoolParams) {
   const [noInput, setNoInput] = useState<boolean>(false);
   const [burnParams, setBurnParams] = useState<any|null>();
   const [waitMessage, setWaitMessage] = useState<string|null>();
+  const [poolData, setPoolData] = useState<any>()
   const [currency, setCurrency] = useState<Currency>();
   const {chainId, account} = useActiveWeb3React();
   const guniPool = props.pool;
@@ -110,10 +111,17 @@ function RemoveLiquidityPanel(props: PoolParams) {
   useEffect(() => {
     const getPool = async () => {
       if (guniPool && token0 && token1) {
-        const details = await fetchPoolDetails(guniPool, token0, token1, account);
-        setPoolDetails(details);
-        if (details && chainId) {
-          setCurrency(new Token(chainId, guniPool.address, details.decimals, details.symbol, details.name));
+        const pools = await fetchPools();
+        for (let i=0; i<pools.length; i++) {
+          if (pools[i].address == guniPool.address.toLowerCase()) {
+            setPoolData(pools[i])
+            const details = await fetchPoolDetails(pools[i], guniPool, token0, token1, account)
+            setPoolDetails(details)
+            if (details && chainId) {
+              setCurrency(new Token(chainId, guniPool.address, details.decimals, details.symbol, details.name));
+            }
+            break
+          }
         }
       }
       if (chainId) {
@@ -176,7 +184,7 @@ function RemoveLiquidityPanel(props: PoolParams) {
     setIsApproved(true);
     setNoInput(true);
     if (guniPool && token0 && token1) {
-      const details = await fetchPoolDetails(guniPool, token0, token1, account);
+      const details = await fetchPoolDetails(poolData, guniPool, token0, token1, account);
       setPoolDetails(details);
     }
   }

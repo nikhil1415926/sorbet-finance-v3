@@ -8,11 +8,6 @@ import styled from "styled-components";
 import { useCurrency } from 'hooks/Tokens'
 import DoubleCurrencyLogo from 'components/DoubleLogo'
 import { ButtonPink } from 'components/Button'
-import { ApolloClient, InMemoryCache, gql } from '@apollo/client';
-
-const TWO = BigNumber.from(2);
-const subgraphMap : { [key:string]:string; } = {};
-subgraphMap['0xAbDDAfB225e10B90D798bB8A886238Fb835e2053'] = 'superarius/guni-usdc-dai'
 
 export type PoolTokens = {
   token0: string
@@ -42,17 +37,19 @@ export type PoolDetails = {
   balanceEth: BigNumber
   share0: BigNumber
   share1: BigNumber
-  apy: number
+  apr: number
   sqrtPriceX96: BigNumber
+  lowerTick: number
+  upperTick: number
+  manager: string
+  feesEarned0: BigNumber
+  feesEarned1: BigNumber
 }
 
-export type APYDetails = {
-  baseLiquidity: BigNumber
-  timeDelta: number
-}
-
-type AddressParam = {
-  address: string;
+type APRType = {
+  apr: number
+  feesEarned0: BigNumber
+  feesEarned1: BigNumber
 }
 
 export const formatBigNumber = (n: BigNumber, decimals: number, roundTo = 3): string => {
@@ -136,40 +133,149 @@ export const DetailsBox = styled.div`
   margin-left: 1rem;
 `;
 
-export const fetchPoolDetails = async (guniPool: Contract, token0: Contract, token1 : Contract, account : string|undefined|null) :Promise<PoolDetails|null> => {
+const X96 = BigNumber.from(2).pow(BigNumber.from(96))
+const BLOCKS_PER_YEAR = 2102400
+
+const computeAverageReserves = (snapshots: any, sqrtPriceX96: BigNumber, firstBlock: number) => {
+  let cumulativeBlocks = BigNumber.from(0)
+  let cumulativeReserves = BigNumber.from(0)
+  const priceX96X96 = sqrtPriceX96.mul(sqrtPriceX96)
+  for (let i=0; i<snapshots.length; i++) {
+    if (Number(snapshots[i].block) > firstBlock) {
+      const reserves0 = BigNumber.from(snapshots[i].reserves0)
+      const reserves1 = BigNumber.from(snapshots[i].reserves1)
+      const reserves0As1X96 = reserves0.mul(priceX96X96).div(X96)
+      const reserves0As1 = reserves0As1X96.div(X96)
+      const reserves = reserves1.add(reserves0As1)
+      let blockDifferential: BigNumber
+      if (i==0) {
+        blockDifferential = BigNumber.from(snapshots[i].block).sub(BigNumber.from(firstBlock.toString()))
+      } else {
+        blockDifferential = BigNumber.from(snapshots[i].block).sub(BigNumber.from(snapshots[i-1].block))
+      }
+      if (blockDifferential.lt(ethers.constants.Zero)) {
+        blockDifferential = ethers.constants.Zero
+      }
+      cumulativeReserves = cumulativeReserves.add(reserves.mul(blockDifferential))
+      cumulativeBlocks = cumulativeBlocks.add(blockDifferential)
+    }
+  }
+  return cumulativeReserves.div(cumulativeBlocks)
+}
+
+const computeTotalFeesEarned = (snapshots: any, sqrtPriceX96: BigNumber): BigNumber[] => {
+  let feesEarned0 = BigNumber.from(0)
+  let feesEarned1 = BigNumber.from(0)
+  for (let i=0; i<snapshots.length; i++) {
+    feesEarned0 = feesEarned0.add(BigNumber.from(snapshots[i].feesEarned0))
+    feesEarned1 = feesEarned1.add(BigNumber.from(snapshots[i].feesEarned1))
+  }
+  const priceX96X96 = sqrtPriceX96.mul(sqrtPriceX96)
+  const fees0As1X96 = feesEarned0.mul(priceX96X96).div(X96)
+  const fees0As1 = fees0As1X96.div(X96)
+  return [feesEarned1.add(fees0As1), feesEarned0, feesEarned1]
+}
+
+const getAPR = (poolData: any, sqrtPriceX96: BigNumber, amount0Current: BigNumber, amount1Current: BigNumber, amount0Liquidity: BigNumber, amount1Liquidity: BigNumber, leftover0: BigNumber, leftover1: BigNumber, currentBlock: string): APRType => {
+  if (poolData.supplySnapshots.length == 0) {
+    return {
+      apr: 0,
+      feesEarned0: ethers.constants.Zero,
+      feesEarned1: ethers.constants.Zero,
+    }
+  }
+  let feesEarned0 = amount0Current.sub(amount0Liquidity).sub(leftover0)
+  let feesEarned1 = amount1Current.sub(amount1Liquidity).sub(leftover1)
+  if (feesEarned0.lt(ethers.constants.Zero)) {
+    feesEarned0 = ethers.constants.Zero
+  }
+  if (feesEarned1.lt(ethers.constants.Zero)) {
+    feesEarned1 = ethers.constants.Zero
+  }
+  if (poolData.feeSnapshots.length == 0) {
+    return {
+      apr: 0,
+      feesEarned0: feesEarned0,
+      feesEarned1: feesEarned1,
+    }
+  }
+  const snapshots = [...poolData.feeSnapshots].sort((a: any, b:any) => (a.block > b.block) ? 1: -1)
+  const supplySnaps = [...poolData.supplySnapshots].sort((a: any, b: any) => (a.block > b.block) ? 1: -1)
+  snapshots.push({
+    block: currentBlock,
+    feesEarned0: feesEarned0.toString(),
+    feesEarned1: feesEarned1.toString()
+  })
+  const [totalFeeValue, feesTotal0, feesTotal1] = computeTotalFeesEarned(snapshots, sqrtPriceX96)
+  const averageReserves = computeAverageReserves(supplySnaps, sqrtPriceX96, Number(poolData.lastTouchWithoutFees))
+  let averagePrincipal = averageReserves.sub(totalFeeValue)
+  if (averagePrincipal.lt(ethers.constants.Zero)) {
+    averagePrincipal = averageReserves
+  }
+  const totalBlocks = Number(currentBlock) - Number(poolData.lastTouchWithoutFees)
+  console.log(totalBlocks)
+  const apr = (Number(ethers.utils.formatEther(totalFeeValue)) * BLOCKS_PER_YEAR) / (Number(ethers.utils.formatEther(averagePrincipal)) * totalBlocks)
+  return {
+    apr: apr,
+    feesEarned0: feesTotal0,
+    feesEarned1: feesTotal1
+  }
+} 
+
+export const fetchPoolDetails = async (poolData: any, guniPool: Contract, token0: Contract, token1 : Contract, account : string|undefined|null) :Promise<PoolDetails|null> => {
   if (guniPool && token0 && token1) {
     let balancePool = ethers.constants.Zero;
     let balance0 = ethers.constants.Zero;
     let balance1 = ethers.constants.Zero;
     let balanceEth = ethers.constants.Zero;
-    const name = await guniPool.name();
-    const gross = await guniPool.getUnderlyingBalances();
-    const supply = await guniPool.totalSupply();
-    const decimals0 = await token0.decimals();
-    const decimals1 = await token1.decimals();
-    const symbol0 = await token0.symbol();
-    const symbol1 = await token1.symbol();
     if (account) {
       balancePool = await guniPool.balanceOf(account);
       balance0 = await token0.balanceOf(account);
       balance1 = await token1.balanceOf(account);
       balanceEth = await guniPool.provider.getBalance(account);
     }
+    const name = await guniPool.name();
+    const gross = await guniPool.getUnderlyingBalances();
+    const supply = BigNumber.from(poolData.totalSupply)
+    const lowerTick = Number(poolData.lowerTick)
+    const upperTick = Number(poolData.upperTick)
+    const decimals0 = await token0.decimals();
+    const decimals1 = await token1.decimals();
+    const symbol0 = await token0.symbol();
+    const symbol1 = await token1.symbol();
     let share0 = ethers.constants.Zero
     let share1 = ethers.constants.Zero
     if (supply.gt(ethers.constants.Zero)) {
       share0 = gross[0].mul(balancePool).div(supply);
       share1 = gross[1].mul(balancePool).div(supply);
     }
-    const poolAddress = await guniPool.pool();
-    const pool = new ethers.Contract(poolAddress, ["function slot0() external view returns (uint160 sqrtPriceX96,int24,uint16,uint16,uint16,uint8,bool)"], guniPool.provider)
+    const pool = new ethers.Contract(
+      ethers.utils.getAddress(poolData.uniswapPool),
+      ["function slot0() external view returns (uint160 sqrtPriceX96,int24,uint16,uint16,uint16,uint8,bool)", "function positions(bytes32) external view returns(uint128 _liquidity,uint256,uint256,uint128,uint128)"],
+      guniPool.provider
+    );
     const {sqrtPriceX96} = await pool.slot0()
-    let apy;
-    try {
-      apy = await fetchAPY(subgraphMap[guniPool.address], decimals0.toString(), decimals1.toString(), gross[0], gross[1], sqrtPriceX96, supply)
-    } catch {
-      apy = 0
-    }
+    const helperContract = new ethers.Contract(
+      "0xFbd0B8D8016b9f908fC9652895c26C5a4994fE36",
+      ["function getAmountsForLiquidity(uint160,int24,int24,uint128) external pure returns(uint256 amount0, uint256 amount1)"],
+      guniPool.provider
+    );
+    const {_liquidity} = await pool.positions(poolData.positionId)
+    const {amount0: amount0Liquidity, amount1: amount1Liquidity} = await helperContract.getAmountsForLiquidity(sqrtPriceX96, poolData.lowerTick, poolData.upperTick, _liquidity)
+    const leftover0 = await token0.balanceOf(guniPool.address)
+    const leftover1 = await token1.balanceOf(guniPool.address)
+    const currentBlock = (await helperContract.provider.getBlock('latest')).number.toString()
+    const {apr, feesEarned0, feesEarned1} = getAPR(
+      poolData,
+      sqrtPriceX96,
+      gross[0],
+      gross[1],
+      amount0Liquidity,
+      amount1Liquidity,
+      leftover0,
+      leftover1,
+      currentBlock
+    );
     return {
       name: name,
       symbol: "G-UNI",
@@ -187,93 +293,30 @@ export const fetchPoolDetails = async (guniPool: Contract, token0: Contract, tok
       balanceEth: balanceEth,
       share0: share0,
       share1: share1,
-      apy: apy,
-      sqrtPriceX96: sqrtPriceX96
+      apr: apr,
+      sqrtPriceX96: sqrtPriceX96,
+      lowerTick: lowerTick,
+      upperTick: upperTick,
+      manager: poolData.manager,
+      feesEarned0: feesEarned0,
+      feesEarned1: feesEarned1,
     }
   }
 
   return null;
 }
 
-export const getLPTokenPrice = (snapshot: any, decimals0: string, decimals1: string): number => {
-  const r0 = Number(ethers.utils.formatUnits(BigNumber.from(snapshot.r0), decimals0))
-  const r1 = Number(ethers.utils.formatUnits(BigNumber.from(snapshot.r1), decimals1))
-  const sqrtPriceX96 = BigNumber.from(snapshot.sqrtPriceX96)
-  const priceX96X96 = sqrtPriceX96.mul(sqrtPriceX96)
-  const priceX96 = priceX96X96.div(TWO.pow(BigNumber.from("96")))
-  const priceX60 = priceX96.div(TWO.pow(BigNumber.from("36")))
-  const price = (Number(priceX60.toString())*(10**Number(decimals0)))/((2**60)*(10**Number(decimals1)))
-  const totalValue = r1 + (r0*price)
-  const totalSupply = Number(ethers.utils.formatEther(BigNumber.from(snapshot.totalSupply)))
-  return totalValue/totalSupply
-}
-
-export const fetchAPY = async (poolSubgraphName: string, decimals0: string, decimals1: string, r0: BigNumber, r1: BigNumber, sqrtPriceX96: BigNumber, supply: BigNumber): Promise<number> => {
-  const APIURL = "https://api.thegraph.com/subgraphs/name/"+poolSubgraphName;
-
-  const obsQ = `
-    query {
-      snapshots {
-        r0
-        r1
-        totalSupply
-        sqrtPriceX96
-        timestamp
-      }
-    }
-  `;
-  
-  const client = new ApolloClient({
-    uri: APIURL,
-    cache: new InMemoryCache()
-  });
-  
-  const data = await client.query({
-    query: gql(obsQ)
-  })
-  const resp = data.data.snapshots
-  const snapshots = [...resp].sort((a:any, b:any) => (a.timestamp > b.timestamp) ? 1 : -1)
-  let cumulativeAPR = 0
-  let cumulativeTime = 0
-  const now = Math.round(new Date().getTime() / 1000);
-  snapshots.push({
-    r0: r0.toString(),
-    r1: r1.toString(),
-    totalSupply: supply.toString(),
-    sqrtPriceX96: sqrtPriceX96.toString(),
-    timestamp: now.toString()
-  });
-  for (let i=1; i<snapshots.length; i++) {
-    const lastSnapshot = snapshots[i-1]
-    const currentSnapshot = snapshots[i]
-    if (Number(currentSnapshot.timestamp)+86400 > now) {
-      const lastGUniTokenPrice = getLPTokenPrice(lastSnapshot, decimals0, decimals1)
-      const currentGUniTokenPrice = getLPTokenPrice(currentSnapshot, decimals0, decimals1)
-      const timeDelta = BigNumber.from(currentSnapshot.timestamp).sub(BigNumber.from(lastSnapshot.timestamp))
-      const guniPriceDelta = currentGUniTokenPrice-lastGUniTokenPrice
-      const guniPercentChange = guniPriceDelta/lastGUniTokenPrice
-      cumulativeAPR += (guniPercentChange * 31536000)
-      cumulativeTime += Number(timeDelta.toString())
-    }
-  }
-
-  const avgAPR = cumulativeAPR / cumulativeTime
-  console.log(avgAPR)
-  const apy = ((1+(avgAPR/365))**365)-1
-  console.log(apy)
-  return apy
-}
-
-function PoolDetails(props: PoolParams) {
+export default function PoolInfo(props: any) {
+  const poolData = props.poolData;
+  const guniPool = useGUniPoolContract(ethers.utils.getAddress(poolData.id));
   const [poolDetails, setPoolDetails] = useState<PoolDetails|null>(null);
   const [seeMore, setSeeMore] = useState<boolean>(false);
   const [seeMoreText, setSeeMoreText] = useState<string>('Show');
   const {chainId, account} = useActiveWeb3React();
-  const guniPool = props.pool;
-  const token0 = useTokenContract(props.token0);
-  const token1 = useTokenContract(props.token1);
-  const currency0 = useCurrency(props.token0);
-  const currency1 = useCurrency(props.token1);
+  const token0 = useTokenContract(ethers.utils.getAddress(poolData.token0));
+  const token1 = useTokenContract(ethers.utils.getAddress(poolData.token1));
+  const currency0 = useCurrency(ethers.utils.getAddress(poolData.token0));
+  const currency1 = useCurrency(ethers.utils.getAddress(poolData.token1));
   const handleSeeMore = () => {
     if (!seeMore) {
       setSeeMore(true);
@@ -286,12 +329,12 @@ function PoolDetails(props: PoolParams) {
   useEffect(() => {
     const getPoolDetails = async () => {
       if (guniPool && token0 && token1) {
-        const details = await fetchPoolDetails(guniPool, token0, token1, account);
+        const details = await fetchPoolDetails(poolData, guniPool, token0, token1, account);
         setPoolDetails(details);
       }
     }
     getPoolDetails();
-  }, [guniPool, token0, token1, account, chainId]);
+  }, [guniPool, token0, token1, account, chainId, poolData]);
   return (
     <>
       {poolDetails ? 
@@ -310,7 +353,10 @@ function PoolDetails(props: PoolParams) {
                 <strong>TVL ($):</strong>{` $${Number((Number(ethers.utils.formatUnits(poolDetails.supply0, poolDetails.decimals0.toString())) + Number(ethers.utils.formatUnits(poolDetails.supply1, poolDetails.decimals1.toString()))).toFixed(2)).toLocaleString('en-US')}`}
               </p>
               <p>
-                <strong>APY:</strong>{` ${poolDetails.apy > 0 ? `~${(poolDetails.apy*100).toFixed(2)}%` : 'TBD'}`}
+                <strong>Fees Earned:</strong>{` ${Number(formatBigNumber(poolDetails.feesEarned0, poolDetails.decimals0, 4)).toLocaleString('en-US')} ${poolDetails.symbol0} + ${Number(formatBigNumber(poolDetails.feesEarned1, poolDetails.decimals1, 4)).toLocaleString('en-US')} ${poolDetails.symbol1}`}
+              </p>
+              <p>
+                <strong>Fees APR:</strong>{` ${poolDetails.apr > 0 ? `~${(poolDetails.apr*100).toFixed(2)}%` : 'TBD'}`}
               </p>
               <p>
                 <strong>Your Share:</strong>{` ${Number(formatBigNumber(poolDetails.share0, poolDetails.decimals0, 2)).toLocaleString('en-US')} ${poolDetails.symbol0} + ${Number(formatBigNumber(poolDetails.share1, poolDetails.decimals1, 2)).toLocaleString('en-US')} ${poolDetails.symbol1}`}
@@ -319,9 +365,9 @@ function PoolDetails(props: PoolParams) {
                 <strong>Your Share ($):</strong>{` $${Number((Number(ethers.utils.formatUnits(poolDetails.share0, poolDetails.decimals0.toString())) + Number(ethers.utils.formatUnits(poolDetails.share1, poolDetails.decimals1.toString()))).toFixed(2)).toLocaleString('en-US')}`}
               </p>
               <ButtonsArea>
-                <ButtonMedium onClick={() => window.location.href = `/#/pools/add/${guniPool.address}`}>Add Liquidity</ButtonMedium>
+                <ButtonMedium onClick={() => window.location.href = `/#/pools/add/${guniPool?.address}`}>Add Liquidity</ButtonMedium>
                 &nbsp;&nbsp;&nbsp;&nbsp;
-                <ButtonMedium onClick={() => window.location.href = `/#/pools/remove/${guniPool.address}`}>Remove Liquidity</ButtonMedium>
+                <ButtonMedium onClick={() => window.location.href = `/#/pools/remove/${guniPool?.address}`}>Remove Liquidity</ButtonMedium>
               </ButtonsArea>
               <br></br>
             </DetailsBox>
@@ -332,11 +378,12 @@ function PoolDetails(props: PoolParams) {
       :
         <></>
       }
+      <br></br>
     </>
   )
 }
 
-export default function PoolInfo(props: AddressParam) {
+/*export default function PoolInfo(props: AddressParam) {
   const [poolTokens, setPoolTokens] = useState<PoolTokens|null>(null);
   const [pool, setPool] = useState<Contract>();
   const {chainId} = useActiveWeb3React();
@@ -357,4 +404,4 @@ export default function PoolInfo(props: AddressParam) {
       {pool && poolTokens ? <><PoolDetails pool={pool} token0={poolTokens.token0} token1={poolTokens.token1} /><br></br></> : <></>}
     </>
   )
-}
+}*/
