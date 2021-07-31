@@ -68,6 +68,13 @@ export default function CurrencyLogo({
       style={style}
       {...rest}
     />)
+  } else if (currency?.symbol == "ETHV" || currency?.symbol == "iETHV") {
+    return (<StyledLogo
+      srcs={['https://raw.githubusercontent.com/volmexfinance/assets/main/logo.png']}
+      size={size}
+      style={style}
+      {...rest}
+    />)
   }
   if (currency?.isNative) {
     return chainId !== 1 ? (

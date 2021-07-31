@@ -178,44 +178,24 @@ const computeTotalFeesEarned = (snapshots: any, sqrtPriceX96: BigNumber): BigNum
   return [feesEarned1.add(fees0As1), feesEarned0, feesEarned1]
 }
 
-const getAPR = (poolData: any, sqrtPriceX96: BigNumber, amount0Current: BigNumber, amount1Current: BigNumber, amount0Liquidity: BigNumber, amount1Liquidity: BigNumber, leftover0: BigNumber, leftover1: BigNumber, currentBlock: string): APRType => {
-  if (poolData.supplySnapshots.length == 0) {
+const getAPR = (poolData: any, sqrtPriceX96: BigNumber): APRType => {
+  if (poolData.supplySnapshots.length == 0 || poolData.feeSnapshots.length == 0) {
     return {
       apr: 0,
       feesEarned0: ethers.constants.Zero,
       feesEarned1: ethers.constants.Zero,
     }
   }
-  let feesEarned0 = amount0Current.sub(amount0Liquidity).sub(leftover0)
-  let feesEarned1 = amount1Current.sub(amount1Liquidity).sub(leftover1)
-  if (feesEarned0.lt(ethers.constants.Zero)) {
-    feesEarned0 = ethers.constants.Zero
-  }
-  if (feesEarned1.lt(ethers.constants.Zero)) {
-    feesEarned1 = ethers.constants.Zero
-  }
-  if (poolData.feeSnapshots.length == 0) {
-    return {
-      apr: 0,
-      feesEarned0: feesEarned0,
-      feesEarned1: feesEarned1,
-    }
-  }
   const snapshots = [...poolData.feeSnapshots].sort((a: any, b:any) => (a.block > b.block) ? 1: -1)
   const supplySnaps = [...poolData.supplySnapshots].sort((a: any, b: any) => (a.block > b.block) ? 1: -1)
-  snapshots.push({
-    block: currentBlock,
-    feesEarned0: feesEarned0.toString(),
-    feesEarned1: feesEarned1.toString()
-  })
   const [totalFeeValue, feesTotal0, feesTotal1] = computeTotalFeesEarned(snapshots, sqrtPriceX96)
   const averageReserves = computeAverageReserves(supplySnaps, sqrtPriceX96, Number(poolData.lastTouchWithoutFees))
   let averagePrincipal = averageReserves.sub(totalFeeValue)
   if (averagePrincipal.lt(ethers.constants.Zero)) {
     averagePrincipal = averageReserves
   }
-  const totalBlocks = Number(currentBlock) - Number(poolData.lastTouchWithoutFees)
-  console.log(totalBlocks)
+  const lastBlock = snapshots[snapshots.length-1].block
+  const totalBlocks = Number(lastBlock) - Number(poolData.lastTouchWithoutFees)
   const apr = (Number(ethers.utils.formatEther(totalFeeValue)) * BLOCKS_PER_YEAR) / (Number(ethers.utils.formatEther(averagePrincipal)) * totalBlocks)
   return {
     apr: apr,
@@ -266,17 +246,11 @@ export const fetchPoolDetails = async (poolData: any, guniPool: Contract, token0
     const {amount0: amount0Liquidity, amount1: amount1Liquidity} = await helperContract.getAmountsForLiquidity(sqrtPriceX96, poolData.lowerTick, poolData.upperTick, _liquidity)
     const leftover0 = await token0.balanceOf(guniPool.address)
     const leftover1 = await token1.balanceOf(guniPool.address)
-    const currentBlock = (await helperContract.provider.getBlock('latest')).number.toString()
+    const extraFees0 = gross[0].sub(amount0Liquidity).sub(leftover0)
+    const extraFees1 = gross[1].sub(amount1Liquidity).sub(leftover1)
     const {apr, feesEarned0, feesEarned1} = getAPR(
       poolData,
-      sqrtPriceX96,
-      gross[0],
-      gross[1],
-      amount0Liquidity,
-      amount1Liquidity,
-      leftover0,
-      leftover1,
-      currentBlock
+      sqrtPriceX96
     );
     const factor = (10**decimals0)/(10**decimals1)
     const lowerPrice = (1.0001**lowerTick)*factor
@@ -303,8 +277,8 @@ export const fetchPoolDetails = async (poolData: any, guniPool: Contract, token0
       lowerTick: lowerTick,
       upperTick: upperTick,
       manager: poolData.manager,
-      feesEarned0: feesEarned0,
-      feesEarned1: feesEarned1,
+      feesEarned0: feesEarned0.add(extraFees0),
+      feesEarned1: feesEarned1.add(extraFees1),
       lowerPrice: lowerPrice,
       upperPrice: upperPrice
     }
