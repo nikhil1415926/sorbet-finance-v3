@@ -138,12 +138,12 @@ export const DetailsBox = styled.div`
 const X96 = BigNumber.from(2).pow(BigNumber.from(96))
 const BLOCKS_PER_YEAR = 2102400
 
-const computeAverageReserves = (snapshots: any, sqrtPriceX96: BigNumber, firstBlock: number) => {
+const computeAverageReserves = (snapshots: any, sqrtPriceX96: BigNumber, firstBlock: number, lastBlock: number) => {
   let cumulativeBlocks = BigNumber.from(0)
   let cumulativeReserves = BigNumber.from(0)
   const priceX96X96 = sqrtPriceX96.mul(sqrtPriceX96)
   for (let i=0; i<snapshots.length; i++) {
-    if (Number(snapshots[i].block) > firstBlock) {
+    if (Number(snapshots[i].block) > firstBlock && Number(snapshots[i].block) < lastBlock) {
       const reserves0 = BigNumber.from(snapshots[i].reserves0)
       const reserves1 = BigNumber.from(snapshots[i].reserves1)
       const reserves0As1X96 = reserves0.mul(priceX96X96).div(X96)
@@ -188,13 +188,13 @@ const getAPR = (poolData: any, sqrtPriceX96: BigNumber): APRType => {
   }
   const snapshots = [...poolData.feeSnapshots].sort((a: any, b:any) => (a.block > b.block) ? 1: -1)
   const supplySnaps = [...poolData.supplySnapshots].sort((a: any, b: any) => (a.block > b.block) ? 1: -1)
+  const lastBlock = snapshots[snapshots.length-1].block
   const [totalFeeValue, feesTotal0, feesTotal1] = computeTotalFeesEarned(snapshots, sqrtPriceX96)
-  const averageReserves = computeAverageReserves(supplySnaps, sqrtPriceX96, Number(poolData.lastTouchWithoutFees))
+  const averageReserves = computeAverageReserves(supplySnaps, sqrtPriceX96, Number(poolData.lastTouchWithoutFees), lastBlock)
   let averagePrincipal = averageReserves.sub(totalFeeValue)
   if (averagePrincipal.lt(ethers.constants.Zero)) {
     averagePrincipal = averageReserves
   }
-  const lastBlock = snapshots[snapshots.length-1].block
   const totalBlocks = Number(lastBlock) - Number(poolData.lastTouchWithoutFees)
   const apr = (Number(ethers.utils.formatEther(totalFeeValue)) * BLOCKS_PER_YEAR) / (Number(ethers.utils.formatEther(averagePrincipal)) * totalBlocks)
   return {
@@ -218,9 +218,9 @@ export const fetchPoolDetails = async (poolData: any, guniPool: Contract, token0
     }
     const name = await guniPool.name();
     const gross = await guniPool.getUnderlyingBalances();
-    const supply = await guniPool.totalSupply();
-    const lowerTick = Number(poolData.lowerTick)
-    const upperTick = Number(poolData.upperTick)
+    const supply = BigNumber.from(poolData.totalSupply);
+    const lowerTick = Number(poolData.lowerTick);
+    const upperTick = Number(poolData.upperTick);
     const decimals0 = await token0.decimals();
     const decimals1 = await token1.decimals();
     const symbol0 = await token0.symbol();
