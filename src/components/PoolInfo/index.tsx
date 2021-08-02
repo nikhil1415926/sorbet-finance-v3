@@ -218,7 +218,7 @@ export const fetchPoolDetails = async (poolData: any, guniPool: Contract, token0
     }
     const name = await guniPool.name();
     const gross = await guniPool.getUnderlyingBalances();
-    const supply = BigNumber.from(poolData.totalSupply)
+    const supply = await guniPool.totalSupply();
     const lowerTick = Number(poolData.lowerTick)
     const upperTick = Number(poolData.upperTick)
     const decimals0 = await token0.decimals();
