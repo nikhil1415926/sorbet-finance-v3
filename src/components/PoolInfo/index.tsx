@@ -9,6 +9,7 @@ import { tryParseAmount, useCurrency } from 'hooks/Tokens'
 import useUSDCPrice from 'hooks/useUSDCPrice'
 import DoubleCurrencyLogo from 'components/DoubleLogo'
 import { ButtonPink } from 'components/Button'
+import { PoolDetailComponent } from './pooldetails'
 
 export type PoolTokens = {
   token0: string
@@ -47,6 +48,12 @@ export type PoolDetails = {
   feesEarned1: BigNumber
   lowerPrice: number
   upperPrice: number
+}
+
+type PoolDetailsShort = {
+  symbol: string
+  symbol0: string
+  symbol1: string
 }
 
 type APRType = {
@@ -132,9 +139,9 @@ const LeftTitle = styled(Title)`
   }
 `;
 
-export const DetailsBox = styled.div`
-  margin-left: 1rem;
-`;
+// export const DetailsBox = styled.div`
+//   margin-left: 1rem;
+// `;
 
 const Load = styled.p`
   text-align: center;
@@ -236,7 +243,7 @@ const getAPR = (poolData: any, sqrtPriceX96: BigNumber, currentFees0: BigNumber,
     feesEarned0: feesTotal0,
     feesEarned1: feesTotal1
   }
-} 
+}
 
 export const fetchPoolDetails = async (poolData: any, guniPool: Contract, token0: Contract, token1 : Contract, account : string|undefined|null) :Promise<PoolDetails|null> => {
   try {
@@ -330,10 +337,23 @@ export const fetchPoolDetails = async (poolData: any, guniPool: Contract, token0
 
 }
 
+export const fetchPoolDetailsShort = async (poolData: any, guniPool: Contract, token0: Contract, token1 : Contract, account : string|undefined|null) :Promise<PoolDetailsShort|null> => {
+  if (guniPool && token0 && token1) {
+    const symbol0 = await token0.symbol();
+    const symbol1 = await token1.symbol();
+    return {
+      symbol: "G-UNI",
+      symbol0: symbol0,
+      symbol1: symbol1,
+    }
+  }
+  return null;
+}
+
 export default function PoolInfo(props: any) {
   const poolData = props.poolData;
   const guniPool = useGUniPoolContract(ethers.utils.getAddress(poolData.id));
-  const [poolDetails, setPoolDetails] = useState<PoolDetails|null>(null);
+  const [poolDetails, setPoolDetails] = useState<PoolDetailsShort|null>(null);
   const [seeMore, setSeeMore] = useState<boolean>(false);
   const [seeMoreText, setSeeMoreText] = useState<string>('Show');
   const [fiatShare0, setFiatShare0] = useState<string|null>();
@@ -359,7 +379,11 @@ export default function PoolInfo(props: any) {
   useEffect(() => {
     const getPoolDetails = async () => {
       if (guniPool && token0 && token1) {
-        const details = await fetchPoolDetails(poolData, guniPool, token0, token1, account);
+        const start = Date.now();
+        const details = await fetchPoolDetailsShort(poolData, guniPool, token0, token1, account);
+        const end = Date.now();
+        const duration = end - start;
+        console.log(`seconds elapsed = ${Math.floor(duration / 1000)}s`);
         setPoolDetails(details);
         if (currency0 && currency1 && details) {
           const currencyAmountTotal0 = tryParseAmount(ethers.utils.formatUnits(details.supply0, details.decimals0.toString()), currency0)
@@ -426,7 +450,8 @@ export default function PoolInfo(props: any) {
             <LeftTitle>{`${poolDetails.symbol0}/${poolDetails.symbol1} LP`}</LeftTitle>
             <ButtonSmall onClick={() => handleSeeMore()}>{seeMoreText}</ButtonSmall>
           </TitleArea>
-          {seeMore ?
+          { seeMore ? <PoolDetailComponent poolData={poolData} /> : <></> }
+          {/* {seeMore ?
             <DetailsBox>
               <p>
                 <strong>TVL:</strong>{` ${Number(formatBigNumber(poolDetails.supply0, poolDetails.decimals0, 2)).toLocaleString('en-US')} ${poolDetails.symbol0} + ${Number(formatBigNumber(poolDetails.supply1, poolDetails.decimals1, 2)).toLocaleString('en-US')} ${poolDetails.symbol1}`}
@@ -458,7 +483,7 @@ export default function PoolInfo(props: any) {
             </DetailsBox>
           :
             <></>
-          }
+          } */}
         </InnerBox>
       :
         <InnerBox>
