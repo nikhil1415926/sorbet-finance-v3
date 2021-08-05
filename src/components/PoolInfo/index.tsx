@@ -4,6 +4,7 @@ import { useActiveWeb3React } from 'hooks/web3';
 import {ethers} from 'ethers';
 import { Contract } from '@ethersproject/contracts'
 import { BigNumber } from '@ethersproject/bignumber'
+import { useInView } from 'react-intersection-observer'
 import styled from "styled-components";
 import { tryParseAmount, useCurrency } from 'hooks/Tokens'
 import useUSDCPrice from 'hooks/useUSDCPrice'
@@ -372,6 +373,9 @@ export default function PoolInfo(props: any) {
   const currency1 = useCurrency(ethers.utils.getAddress(poolData.token1));
   const fiatPrice0 = useUSDCPrice(currency0 ?? undefined);
   const fiatPrice1 = useUSDCPrice(currency1 ?? undefined);
+  const [ref, inView] = useInView({
+    threshold: 0,
+  })
   const handleSeeMore = () => {
     if (!seeMore) {
       setSeeMore(true);
@@ -396,7 +400,7 @@ export default function PoolInfo(props: any) {
     getPoolDetails();
   }, [guniPool, token0, token1, account, chainId, poolData]);
   useEffect(() => {
-    if (guniPool && token0 && token1) {
+    if (inView && guniPool && token0 && token1) {
       const start = Date.now();
       fetchPoolDetails(poolData, guniPool, token0, token1, account).then((details) => {
         setPoolDetailsLong(details);
@@ -457,11 +461,11 @@ export default function PoolInfo(props: any) {
         }
       })
     }
-  }, [guniPool, token0, token1, account, chainId, poolData, fiatPrice0, fiatPrice1, currency0, currency1]);
+  }, [inView, guniPool, token0, token1, account, chainId, poolData, fiatPrice0, fiatPrice1, currency0, currency1]);
   return (
     <>
       {poolDetails ? 
-        <InnerBox>
+        <InnerBox ref={ref}>
           <TitleArea>
             <LogoWrapper>
               <DoubleCurrencyLogo currency0={currency1 ? currency1 : undefined} currency1={currency0 ? currency0 : undefined} size={36} margin={true} />

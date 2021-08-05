@@ -4,8 +4,10 @@ import styled from "styled-components";
 import { ApolloClient, InMemoryCache, gql } from '@apollo/client';
 import { ButtonPink } from 'components/Button'
 import { useActiveWeb3React } from 'hooks/web3'
-import PoolInfo from '../../components/PoolInfo';
+import {ethers} from 'ethers';
+import { useTokenContract, useGUniPoolContract } from 'hooks/useContract';
 import { PoolInfo as PoolInfoInterface } from '../../state/pool/reducer';
+import PoolInfo, { fetchPoolDetails } from '../../components/PoolInfo';
 import { usePool, fetchPools } from '../../state/pool/hooks';
 
 export type PoolParam = {
