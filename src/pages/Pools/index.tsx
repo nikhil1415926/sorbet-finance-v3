@@ -1,10 +1,12 @@
 //import { useGUniFactoryContract } from 'hooks/useContract'
-import React, {useState, useEffect} from 'react'
-import PoolInfo from '../../components/PoolInfo';
+import React, {useEffect, useState} from 'react'
 import styled from "styled-components";
 import { ApolloClient, InMemoryCache, gql } from '@apollo/client';
 import { ButtonPink } from 'components/Button'
 import { useActiveWeb3React } from 'hooks/web3'
+import PoolInfo from '../../components/PoolInfo';
+import { PoolInfo as PoolInfoInterface } from '../../state/pool/reducer';
+import { usePool, fetchPools } from '../../state/pool/hooks';
 
 export type PoolParam = {
   address: string;
@@ -48,59 +50,6 @@ const Outer = styled.div`
   flex-direction: column;
 `
 
-export const fetchPools = async () => {
-  try {
-    const APIURL = "https://api.thegraph.com/subgraphs/name/gelatodigital/g-uni";
-
-    const obsQ = `
-      query {
-        pools {
-          id
-          blockCreated
-          manager
-          address
-          uniswapPool
-          positionId
-          token0
-          token1
-          feeTier
-          liquidity
-          lowerTick
-          upperTick
-          totalSupply
-          managerFee
-          lastTouchWithoutFees
-          supplySnapshots {
-            id
-            block
-            reserves0
-            reserves1
-          }
-          feeSnapshots {
-            id
-            block
-            feesEarned0
-            feesEarned1
-          }
-        }
-      }
-    `;
-    
-    const client = new ApolloClient({
-      uri: APIURL,
-      cache: new InMemoryCache()
-    });
-    
-    const data = await client.query({
-      query: gql(obsQ)
-    })
-    return data.data.pools;
-  } catch(e) {
-    console.log("error fetching pools for subgraph:", e)
-    return []
-  }
-}
-
 const featuredPools = [
   '0xAbDDAfB225e10B90D798bB8A886238Fb835e2053'.toLowerCase(),
   '0x4f38892c16bfbB4f4f7424EEfAa9767F4E922073'.toLowerCase(),
@@ -108,10 +57,10 @@ const featuredPools = [
 ]
 
 export default function ListPools() {
-  const [poolsData, setPoolsData] = useState<any[]>([]);
   const [featuredPoolsData, setFeaturedPoolsData] = useState<any[]>([]);
   const [showAll, setShowAll] = useState<boolean>(false);
   const { chainId } = useActiveWeb3React()
+  const [poolsData, setPoolsData] = usePool();
   useEffect(() => {
     fetchPools().then((result) => {
       const allPools = result;
@@ -134,17 +83,17 @@ export default function ListPools() {
     <>
     {Number(chainId) == 1 ?
       <Box>
-        <Title>G-UNI Pools</Title>
-        {featuredPoolsData.length > 0 && poolsData.length > 0 ?
-          <Outer>
-            <List>
-              {featuredPoolsData.map(function(poolData, index){
+      <Title>G-UNI Pools</Title>
+      {poolsData.length > 0 ?
+        <Outer>
+          <List>
+            {featuredPoolsData.map(function(poolData: PoolInfoInterface, index){
                 return <PoolInfo key={index} poolData={poolData} />;
               })}
-            </List>
+          </List>
           {showAll ?
             <List>
-            {poolsData.map(function(poolData, index){
+            {poolsData.map(function(poolData: PoolInfoInterface, index){
               return <PoolInfo key={index} poolData={poolData} />;
             })}
             </List>
@@ -154,15 +103,9 @@ export default function ListPools() {
           }
           <Button onClick={() => setShowAll(!showAll)}>{showAll ? 'Show Less':'Show All'}</Button>
           <br></br>
-          </Outer>
+        </Outer>
         :
-          <Outer>
-            {Number(chainId) == 1 ?
-              <></>
-            :
-              <p>WRONG NETWORK</p>
-            }
-          </Outer>
+          <></>
         }
       </Box>
     :

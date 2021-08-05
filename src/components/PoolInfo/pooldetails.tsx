@@ -1,14 +1,10 @@
-import React, { useState, useEffect } from 'react'
+import React from 'react'
 import styled from "styled-components"
-import {useTokenContract, useGUniPoolContract} from 'hooks/useContract'
-import { useCurrency } from 'hooks/Tokens'
-import {ethers} from 'ethers'
-import { Contract } from '@ethersproject/contracts'
+import {ethers, Contract} from 'ethers'
 import { BigNumber } from '@ethersproject/bignumber'
 import { ButtonPink } from 'components/Button'
 import Loader from 'components/Loader'
-import { useActiveWeb3React } from 'hooks/web3';
-import { fetchPoolDetails } from '.'
+import { PoolDetails } from '.'
 
 const DetailsBox = styled.div`
   margin-left: 1rem;
@@ -37,39 +33,6 @@ const DetailsLoader = styled(Loader)`
   align-items: center;
 `
 
-type APRType = {
-  apr: number
-  feesEarned0: BigNumber
-  feesEarned1: BigNumber
-}
-type PoolDetails = {
-  name: string
-  symbol: string
-  symbol0: string
-  symbol1: string
-  decimals: number
-  decimals0: number
-  decimals1: number
-  supply: BigNumber
-  supply0: BigNumber
-  supply1: BigNumber
-  balancePool: BigNumber
-  balance0: BigNumber
-  balance1: BigNumber
-  balanceEth: BigNumber
-  share0: BigNumber
-  share1: BigNumber
-  apr: number
-  sqrtPriceX96: BigNumber
-  lowerTick: number
-  upperTick: number
-  manager: string
-  feesEarned0: BigNumber
-  feesEarned1: BigNumber
-  lowerPrice: number
-  upperPrice: number
-}
-
 const formatBigNumber = (n: BigNumber, decimals: number, roundTo = 3): string => {
   const str = ethers.utils.formatUnits(n, decimals.toString());
   if (!str.includes(".")) {
@@ -86,27 +49,10 @@ const formatBigNumber = (n: BigNumber, decimals: number, roundTo = 3): string =>
 
 
 interface PoolDetailProps {
-  poolData: any;
+  poolDetails: PoolDetails | null;
+  guniPool: Contract |  null;
 }
-export const PoolDetailComponent: React.FC<PoolDetailProps> = ({ poolData }: PoolDetailProps) => {
-  const guniPool = useGUniPoolContract(ethers.utils.getAddress(poolData.id));
-  const token0 = useTokenContract(ethers.utils.getAddress(poolData.token0));
-  const token1 = useTokenContract(ethers.utils.getAddress(poolData.token1));
-  const {account} = useActiveWeb3React();
-  const [poolDetails, setPoolDetails] = useState<PoolDetails|null>(null);
-  useEffect(() => {
-    const getPoolDetails = async () => {
-      if (guniPool && token0 && token1) {
-        const start = Date.now();
-        const details = await fetchPoolDetails(poolData, guniPool, token0, token1, account);
-        const end = Date.now();
-        const duration = end - start;
-        console.log(`seconds elapsed = ${Math.floor(duration / 1000)}s`);
-        setPoolDetails(details);
-      }
-    }
-    getPoolDetails();
-  }, []);
+export const PoolDetailComponent: React.FC<PoolDetailProps> = ({ poolDetails, guniPool }: PoolDetailProps) => {
   return (
     <>
       {poolDetails ?

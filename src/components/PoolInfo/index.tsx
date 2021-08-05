@@ -10,6 +10,7 @@ import useUSDCPrice from 'hooks/useUSDCPrice'
 import DoubleCurrencyLogo from 'components/DoubleLogo'
 import { ButtonPink } from 'components/Button'
 import { PoolDetailComponent } from './pooldetails'
+import Loader from 'components/Loader'
 
 export type PoolTokens = {
   token0: string
@@ -77,7 +78,7 @@ export const formatBigNumber = (n: BigNumber, decimals: number, roundTo = 3): st
 }
 
 const ButtonSmall = styled(ButtonPink)`
-  width: 15%;
+  width: 5vw;
   margin-right: 1rem;
   padding-top: 0.03rem;
   padding-bottom: 0.03rem;
@@ -125,7 +126,7 @@ const Title = styled.p`
   }
 `;
 
-export const LogoWrapper = styled.p`
+export const LogoWrapper = styled.div`
   margin-left: 1rem;
   @media only screen and (max-width: 500px) {
     margin-left: 0.5rem;
@@ -139,9 +140,12 @@ const LeftTitle = styled(Title)`
   }
 `;
 
-// export const DetailsBox = styled.div`
-//   margin-left: 1rem;
-// `;
+const ShowMoreLoader = styled(Loader)`
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+`
 
 const Load = styled.p`
   text-align: center;
@@ -354,6 +358,7 @@ export default function PoolInfo(props: any) {
   const poolData = props.poolData;
   const guniPool = useGUniPoolContract(ethers.utils.getAddress(poolData.id));
   const [poolDetails, setPoolDetails] = useState<PoolDetailsShort|null>(null);
+  const [poolDetailsLong, setPoolDetailsLong] = useState<PoolDetails|null>(null);
   const [seeMore, setSeeMore] = useState<boolean>(false);
   const [seeMoreText, setSeeMoreText] = useState<string>('Show');
   const [fiatShare0, setFiatShare0] = useState<string|null>();
@@ -385,6 +390,14 @@ export default function PoolInfo(props: any) {
         const duration = end - start;
         console.log(`seconds elapsed = ${Math.floor(duration / 1000)}s`);
         setPoolDetails(details);
+      }
+    }
+    getPoolDetails();
+  }, [guniPool, token0, token1, account, chainId, poolData]);
+  useEffect(() => {
+    if (guniPool && token0 && token1) {
+      fetchPoolDetails(poolData, guniPool, token0, token1, account).then((details) => {
+        setPoolDetailsLong(details);
         if (currency0 && currency1 && details) {
           const currencyAmountTotal0 = tryParseAmount(ethers.utils.formatUnits(details.supply0, details.decimals0.toString()), currency0)
           const currencyAmountShare0 = tryParseAmount(ethers.utils.formatUnits(details.share0, details.decimals0.toString()), currency0)
@@ -437,53 +450,21 @@ export default function PoolInfo(props: any) {
             setFiatTotal1('0')
           }
         }
-      }
+      })
     }
-    getPoolDetails();
   }, [guniPool, token0, token1, account, chainId, poolData, fiatPrice0, fiatPrice1, currency0, currency1]);
   return (
     <>
       {poolDetails ? 
         <InnerBox>
           <TitleArea>
-            <LogoWrapper><DoubleCurrencyLogo currency0={currency1 ? currency1 : undefined} currency1={currency0 ? currency0 : undefined} size={36} margin={true} /></LogoWrapper>
+            <LogoWrapper>
+              <DoubleCurrencyLogo currency0={currency1 ? currency1 : undefined} currency1={currency0 ? currency0 : undefined} size={36} margin={true} />
+            </LogoWrapper>
             <LeftTitle>{`${poolDetails.symbol0}/${poolDetails.symbol1} LP`}</LeftTitle>
-            <ButtonSmall onClick={() => handleSeeMore()}>{seeMoreText}</ButtonSmall>
+            <ButtonSmall onClick={() => handleSeeMore()}>{poolDetailsLong ? seeMoreText : <ShowMoreLoader stroke="white"/>}</ButtonSmall>
           </TitleArea>
-          { seeMore ? <PoolDetailComponent poolData={poolData} /> : <></> }
-          {/* {seeMore ?
-            <DetailsBox>
-              <p>
-                <strong>TVL:</strong>{` ${Number(formatBigNumber(poolDetails.supply0, poolDetails.decimals0, 2)).toLocaleString('en-US')} ${poolDetails.symbol0} + ${Number(formatBigNumber(poolDetails.supply1, poolDetails.decimals1, 2)).toLocaleString('en-US')} ${poolDetails.symbol1}`}
-              </p>
-              <p>
-                <strong>TVL ($):</strong>{fiatTotal0 && fiatTotal1 ? ` $${(Number(fiatTotal0) + Number(fiatTotal1)).toLocaleString('en-US')}`: ' ??'}
-              </p>
-              <p>
-                <strong>Total Fees Earned:</strong>{` ${Number(formatBigNumber(poolDetails.feesEarned0, poolDetails.decimals0, 4)).toLocaleString('en-US')} ${poolDetails.symbol0} + ${Number(formatBigNumber(poolDetails.feesEarned1, poolDetails.decimals1, 4)).toLocaleString('en-US')} ${poolDetails.symbol1}`}
-              </p>
-              <p>
-                <strong>Fees APR:</strong>{` ${poolDetails.apr ? `~${(poolDetails.apr*100).toFixed(2)}%` : 'TBD'}`}
-              </p>
-              <p>
-                <strong>Position Range:</strong>{` ${poolDetails.lowerPrice.toFixed(4)} ${poolDetails.symbol1} - ${poolDetails.upperPrice.toFixed(4)} ${poolDetails.symbol1}`}
-              </p>
-              <p>
-                <strong>Your Share:</strong>{` ${Number(formatBigNumber(poolDetails.share0, poolDetails.decimals0, 2)).toLocaleString('en-US')} ${poolDetails.symbol0} + ${Number(formatBigNumber(poolDetails.share1, poolDetails.decimals1, 2)).toLocaleString('en-US')} ${poolDetails.symbol1}`}
-              </p>
-              <p>
-                <strong>Your Share ($):</strong>{fiatShare0 && fiatShare1 ? ` $${(Number(fiatShare0) + Number(fiatShare1)).toLocaleString('en-US')}`: ' $0'}
-              </p>
-              <ButtonsArea>
-                <ButtonMedium onClick={() => window.location.href = `/#/pools/add/${guniPool?.address}`}>Add Liquidity</ButtonMedium>
-                &nbsp;&nbsp;&nbsp;&nbsp;
-                <ButtonMedium onClick={() => window.location.href = `/#/pools/remove/${guniPool?.address}`}>Remove Liquidity</ButtonMedium>
-              </ButtonsArea>
-              <br></br>
-            </DetailsBox>
-          :
-            <></>
-          } */}
+          { seeMore ? <PoolDetailComponent guniPool={guniPool} poolDetails={poolDetailsLong} /> : <></> }
         </InnerBox>
       :
         <InnerBox>
@@ -494,26 +475,3 @@ export default function PoolInfo(props: any) {
     </>
   )
 }
-
-/*export default function PoolInfo(props: AddressParam) {
-  const [poolTokens, setPoolTokens] = useState<PoolTokens|null>(null);
-  const [pool, setPool] = useState<Contract>();
-  const {chainId} = useActiveWeb3React();
-  const guniPool = useGUniPoolContract(props.address);
-  useEffect(() => {
-    const getPoolInfo = async () => {
-      if (guniPool) {
-        const token0 = await guniPool.token0();
-        const token1 = await guniPool.token1();
-        setPoolTokens({token0: token0, token1: token1});
-        setPool(guniPool);
-      }
-    }
-    getPoolInfo();
-  }, [guniPool, chainId]);
-  return (
-    <>
-      {pool && poolTokens ? <><PoolDetails pool={pool} token0={poolTokens.token0} token1={poolTokens.token1} /><br></br></> : <></>}
-    </>
-  )
-}*/
