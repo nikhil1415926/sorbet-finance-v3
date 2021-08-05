@@ -5,7 +5,8 @@ import {ethers} from 'ethers';
 import { Contract } from '@ethersproject/contracts'
 import { BigNumber } from '@ethersproject/bignumber'
 import styled from "styled-components";
-import { useCurrency } from 'hooks/Tokens'
+import { tryParseAmount, useCurrency } from 'hooks/Tokens'
+import useUSDCPrice from 'hooks/useUSDCPrice'
 import DoubleCurrencyLogo from 'components/DoubleLogo'
 import { ButtonPink } from 'components/Button'
 
@@ -293,11 +294,17 @@ export default function PoolInfo(props: any) {
   const [poolDetails, setPoolDetails] = useState<PoolDetails|null>(null);
   const [seeMore, setSeeMore] = useState<boolean>(false);
   const [seeMoreText, setSeeMoreText] = useState<string>('Show');
+  const [fiatShare0, setFiatShare0] = useState<string|null>();
+  const [fiatShare1, setFiatShare1] = useState<string|null>();
+  const [fiatTotal0, setFiatTotal0] = useState<string|null>();
+  const [fiatTotal1, setFiatTotal1] = useState<string|null>();
   const {chainId, account} = useActiveWeb3React();
   const token0 = useTokenContract(ethers.utils.getAddress(poolData.token0));
   const token1 = useTokenContract(ethers.utils.getAddress(poolData.token1));
   const currency0 = useCurrency(ethers.utils.getAddress(poolData.token0));
   const currency1 = useCurrency(ethers.utils.getAddress(poolData.token1));
+  const fiatPrice0 = useUSDCPrice(currency0 ?? undefined);
+  const fiatPrice1 = useUSDCPrice(currency1 ?? undefined);
   const handleSeeMore = () => {
     if (!seeMore) {
       setSeeMore(true);
@@ -312,10 +319,62 @@ export default function PoolInfo(props: any) {
       if (guniPool && token0 && token1) {
         const details = await fetchPoolDetails(poolData, guniPool, token0, token1, account);
         setPoolDetails(details);
+        if (currency0 && currency1 && details) {
+          const currencyAmountTotal0 = tryParseAmount(ethers.utils.formatUnits(details.supply0, details.decimals0.toString()), currency0)
+          const currencyAmountShare0 = tryParseAmount(ethers.utils.formatUnits(details.share0, details.decimals0.toString()), currency0)
+          try {
+            if (currencyAmountShare0) {
+              if (details.symbol0 === "USDC") {
+                setFiatShare0(Number(ethers.utils.formatUnits(details.share0, details.decimals0.toString())).toFixed(4))
+              } else {
+                const share0 = fiatPrice0?.quote(currencyAmountShare0)
+                setFiatShare0(share0 ? share0.toFixed(4) : '0')
+              }
+            }
+          } catch(_e) {
+            console.log("Share not exist 0")
+            setFiatShare0('0')
+          }
+          if (currencyAmountTotal0) {
+            if (details.symbol0 === "USDC") {
+              setFiatTotal0(Number(ethers.utils.formatUnits(details.supply0, details.decimals0.toString())).toFixed(4))
+            } else {
+              const total0 = fiatPrice0?.quote(currencyAmountTotal0)
+              setFiatTotal0(total0 ? total0.toFixed(4) : '0')
+            }
+          } else {
+            setFiatTotal0('0')
+          }
+          const currencyAmountTotal1 = tryParseAmount(ethers.utils.formatUnits(details.supply1, details.decimals1.toString()), currency1)
+          const currencyAmountShare1 = tryParseAmount(ethers.utils.formatUnits(details.share1, details.decimals1.toString()), currency1)
+          try {
+            if (currencyAmountShare1) {
+              if (details.symbol1 === "USDC") {
+                setFiatShare1(Number(ethers.utils.formatUnits(details.share1, details.decimals1.toString())).toFixed(4))
+              } else {
+                const share1 = fiatPrice1?.quote(currencyAmountShare1)
+                setFiatShare1(share1 ? share1.toFixed(4) : '0')
+              }
+            }
+          } catch(_e) {
+            console.log("Share not exist 1")
+            setFiatShare1('0')
+          }
+          if (currencyAmountTotal1) {
+            if (details.symbol1 === "USDC") {
+              setFiatTotal1(Number(ethers.utils.formatUnits(details.supply1, details.decimals1.toString())).toFixed(4))
+            } else {
+              const total1 = fiatPrice1?.quote(currencyAmountTotal1)
+              setFiatTotal1(total1 ? total1.toFixed(4) : '0')
+            }
+          } else {
+            setFiatTotal1('0')
+          }
+        }
       }
     }
     getPoolDetails();
-  }, [guniPool, token0, token1, account, chainId, poolData]);
+  }, [guniPool, token0, token1, account, chainId, poolData, fiatPrice0, fiatPrice1, currency0, currency1]);
   return (
     <>
       {poolDetails ? 
@@ -331,7 +390,7 @@ export default function PoolInfo(props: any) {
                 <strong>TVL:</strong>{` ${Number(formatBigNumber(poolDetails.supply0, poolDetails.decimals0, 2)).toLocaleString('en-US')} ${poolDetails.symbol0} + ${Number(formatBigNumber(poolDetails.supply1, poolDetails.decimals1, 2)).toLocaleString('en-US')} ${poolDetails.symbol1}`}
               </p>
               <p>
-                <strong>TVL ($):</strong>{` $${Number((Number(ethers.utils.formatUnits(poolDetails.supply0, poolDetails.decimals0.toString())) + Number(ethers.utils.formatUnits(poolDetails.supply1, poolDetails.decimals1.toString()))).toFixed(2)).toLocaleString('en-US')}`}
+                <strong>TVL ($):</strong>{fiatTotal0 && fiatTotal1 ? ` $${(Number(fiatTotal0) + Number(fiatTotal1)).toLocaleString('en-US')}`: ' ??'}
               </p>
               <p>
                 <strong>Total Fees Earned:</strong>{` ${Number(formatBigNumber(poolDetails.feesEarned0, poolDetails.decimals0, 4)).toLocaleString('en-US')} ${poolDetails.symbol0} + ${Number(formatBigNumber(poolDetails.feesEarned1, poolDetails.decimals1, 4)).toLocaleString('en-US')} ${poolDetails.symbol1}`}
@@ -346,7 +405,7 @@ export default function PoolInfo(props: any) {
                 <strong>Your Share:</strong>{` ${Number(formatBigNumber(poolDetails.share0, poolDetails.decimals0, 2)).toLocaleString('en-US')} ${poolDetails.symbol0} + ${Number(formatBigNumber(poolDetails.share1, poolDetails.decimals1, 2)).toLocaleString('en-US')} ${poolDetails.symbol1}`}
               </p>
               <p>
-                <strong>Your Share ($):</strong>{` $${Number((Number(ethers.utils.formatUnits(poolDetails.share0, poolDetails.decimals0.toString())) + Number(ethers.utils.formatUnits(poolDetails.share1, poolDetails.decimals1.toString()))).toFixed(2)).toLocaleString('en-US')}`}
+                <strong>Your Share ($):</strong>{fiatShare0 && fiatShare1 ? ` $${(Number(fiatShare0) + Number(fiatShare1)).toLocaleString('en-US')}`: ' ??'}
               </p>
               <ButtonsArea>
                 <ButtonMedium onClick={() => window.location.href = `/#/pools/add/${guniPool?.address}`}>Add Liquidity</ButtonMedium>
