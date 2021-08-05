@@ -385,19 +385,24 @@ export default function PoolInfo(props: any) {
     const getPoolDetails = async () => {
       if (guniPool && token0 && token1) {
         const start = Date.now();
-        const details = await fetchPoolDetailsShort(poolData, guniPool, token0, token1, account);
-        const end = Date.now();
-        const duration = end - start;
-        console.log(`seconds elapsed = ${Math.floor(duration / 1000)}s`);
-        setPoolDetails(details);
+        fetchPoolDetailsShort(poolData, guniPool, token0, token1, account).then((result) => {
+          const end = Date.now();
+          const duration = end - start;
+          console.log(`seconds elapsed = ${Math.floor(duration / 1000)}s`);
+          setPoolDetails(result);
+        })
       }
     }
     getPoolDetails();
   }, [guniPool, token0, token1, account, chainId, poolData]);
   useEffect(() => {
     if (guniPool && token0 && token1) {
+      const start = Date.now();
       fetchPoolDetails(poolData, guniPool, token0, token1, account).then((details) => {
         setPoolDetailsLong(details);
+        const end = Date.now();
+        const duration = end - start;
+        console.log(`seconds elapsed = ${Math.floor(duration / 1000)}s`);
         if (currency0 && currency1 && details) {
           const currencyAmountTotal0 = tryParseAmount(ethers.utils.formatUnits(details.supply0, details.decimals0.toString()), currency0)
           const currencyAmountShare0 = tryParseAmount(ethers.utils.formatUnits(details.share0, details.decimals0.toString()), currency0)
@@ -462,7 +467,7 @@ export default function PoolInfo(props: any) {
               <DoubleCurrencyLogo currency0={currency1 ? currency1 : undefined} currency1={currency0 ? currency0 : undefined} size={36} margin={true} />
             </LogoWrapper>
             <LeftTitle>{`${poolDetails.symbol0}/${poolDetails.symbol1} LP`}</LeftTitle>
-            <ButtonSmall onClick={() => handleSeeMore()}>{poolDetailsLong ? seeMoreText : <ShowMoreLoader stroke="white"/>}</ButtonSmall>
+            <ButtonSmall onClick={() => handleSeeMore()} disabled={poolDetailsLong ? false : true}>{poolDetailsLong ? seeMoreText : <ShowMoreLoader stroke="white"/>}</ButtonSmall>
           </TitleArea>
           { seeMore ? <PoolDetailComponent guniPool={guniPool} poolDetails={poolDetailsLong} /> : <></> }
         </InnerBox>
