@@ -447,7 +447,7 @@ export default function PoolInfo(props: any) {
                 <strong>Your Share:</strong>{` ${Number(formatBigNumber(poolDetails.share0, poolDetails.decimals0, 2)).toLocaleString('en-US')} ${poolDetails.symbol0} + ${Number(formatBigNumber(poolDetails.share1, poolDetails.decimals1, 2)).toLocaleString('en-US')} ${poolDetails.symbol1}`}
               </p>
               <p>
-                <strong>Your Share ($):</strong>{fiatShare0 && fiatShare1 ? ` $${(Number(fiatShare0) + Number(fiatShare1)).toLocaleString('en-US')}`: ' ??'}
+                <strong>Your Share ($):</strong>{fiatShare0 && fiatShare1 ? ` $${(Number(fiatShare0) + Number(fiatShare1)).toLocaleString('en-US')}`: ' $0'}
               </p>
               <ButtonsArea>
                 <ButtonMedium onClick={() => window.location.href = `/#/pools/add/${guniPool?.address}`}>Add Liquidity</ButtonMedium>
