@@ -110,7 +110,7 @@ function RemoveLiquidityPanel(props: PoolParams) {
 
   useEffect(() => {
     const getPool = async () => {
-      if (guniPool && token0 && token1) {
+      if (guniPool && token0 && token1 && Number(chainId) == 1) {
         const pools = await fetchPools();
         for (let i=0; i<pools.length; i++) {
           if (pools[i].address == guniPool.address.toLowerCase()) {
@@ -285,7 +285,13 @@ export default function RemoveLiquidity() {
   }, [guniPool, chainId]);
   return (
     <>
-      {pool && poolTokens ? <RemoveLiquidityPanel pool={pool} token0={poolTokens.token0} token1={poolTokens.token1} /> : <></>}
+      {pool && poolTokens ? 
+        <RemoveLiquidityPanel pool={pool} token0={poolTokens.token0} token1={poolTokens.token1} /> 
+      : 
+        <>
+          { Number(chainId) == 1 ? <></> : <p>WRONG NETWORK</p> }
+        </>
+      }
     </>
   )
 }

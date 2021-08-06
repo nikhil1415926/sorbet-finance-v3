@@ -136,6 +136,12 @@ export const DetailsBox = styled.div`
   margin-left: 1rem;
 `;
 
+const Load = styled.p`
+  text-align: center;
+  margin-right: 5rem;
+  margin-left: 5rem;
+`
+
 const X96 = BigNumber.from(2).pow(BigNumber.from(96))
 const BLOCKS_PER_YEAR = 2102400
 
@@ -143,43 +149,52 @@ const computeAverageReserves = (snapshots: any, sqrtPriceX96: BigNumber, firstBl
   let cumulativeBlocks = BigNumber.from(0)
   let cumulativeReserves = BigNumber.from(0)
   const priceX96X96 = sqrtPriceX96.mul(sqrtPriceX96)
-  for (let i=0; i<snapshots.length; i++) {
-    if (Number(snapshots[i].block) > firstBlock && Number(snapshots[i].block) < lastBlock) {
-      const reserves0 = BigNumber.from(snapshots[i].reserves0)
-      const reserves1 = BigNumber.from(snapshots[i].reserves1)
-      const reserves0As1X96 = reserves0.mul(priceX96X96).div(X96)
-      const reserves0As1 = reserves0As1X96.div(X96)
-      const reserves = reserves1.add(reserves0As1)
-      let blockDifferential: BigNumber
-      if (i==0) {
-        blockDifferential = BigNumber.from(snapshots[i].block).sub(BigNumber.from(firstBlock.toString()))
-      } else {
-        blockDifferential = BigNumber.from(snapshots[i].block).sub(BigNumber.from(snapshots[i-1].block))
+  for (let i=1; i<snapshots.length+1; i++) {
+    if (Number(snapshots[i-1].block) <= lastBlock) {
+      if (i == snapshots.length || Number(snapshots[i].block) > firstBlock) {
+        const reserves0 = BigNumber.from(snapshots[i-1].reserves0)
+        const reserves1 = BigNumber.from(snapshots[i-1].reserves1)
+        const reserves0As1X96 = reserves0.mul(priceX96X96).div(X96)
+        const reserves0As1 = reserves0As1X96.div(X96)
+        const reserves = reserves1.add(reserves0As1)
+        let blockDifferential: BigNumber
+        if (i<snapshots.length) {
+          blockDifferential = BigNumber.from(snapshots[i].block).sub(BigNumber.from(snapshots[i-1].block))
+        } else {
+          blockDifferential = BigNumber.from(lastBlock).sub(BigNumber.from(snapshots[i-1].block))
+        }
+        cumulativeReserves = cumulativeReserves.add(reserves.mul(blockDifferential))
+        cumulativeBlocks = cumulativeBlocks.add(blockDifferential)
       }
-      if (blockDifferential.lt(ethers.constants.Zero)) {
-        blockDifferential = ethers.constants.Zero
-      }
-      cumulativeReserves = cumulativeReserves.add(reserves.mul(blockDifferential))
-      cumulativeBlocks = cumulativeBlocks.add(blockDifferential)
     }
   }
-  return cumulativeReserves.div(cumulativeBlocks)
+  if (cumulativeBlocks.gt(ethers.constants.Zero)) {
+    return cumulativeReserves.div(cumulativeBlocks)
+  } else {
+    return ethers.constants.Zero
+  }
 }
 
-const computeTotalFeesEarned = (snapshots: any, sqrtPriceX96: BigNumber): BigNumber[] => {
+const computeTotalFeesEarned = (snapshots: any, sqrtPriceX96: BigNumber, firstBlock: number): BigNumber[] => {
   let feesEarned0 = BigNumber.from(0)
   let feesEarned1 = BigNumber.from(0)
+  let totalFeesEarned0 = BigNumber.from(0)
+  let totalFeesEarned1 = BigNumber.from(0)
   for (let i=0; i<snapshots.length; i++) {
-    feesEarned0 = feesEarned0.add(BigNumber.from(snapshots[i].feesEarned0))
-    feesEarned1 = feesEarned1.add(BigNumber.from(snapshots[i].feesEarned1))
+    if (Number(snapshots[i].block) >= firstBlock) {
+      feesEarned0 = feesEarned0.add(BigNumber.from(snapshots[i].feesEarned0))
+      feesEarned1 = feesEarned1.add(BigNumber.from(snapshots[i].feesEarned1))
+    }
+    totalFeesEarned0 = totalFeesEarned0.add(BigNumber.from(snapshots[i].feesEarned0))
+    totalFeesEarned1 = totalFeesEarned1.add(BigNumber.from(snapshots[i].feesEarned1))
   }
   const priceX96X96 = sqrtPriceX96.mul(sqrtPriceX96)
   const fees0As1X96 = feesEarned0.mul(priceX96X96).div(X96)
   const fees0As1 = fees0As1X96.div(X96)
-  return [feesEarned1.add(fees0As1), feesEarned0, feesEarned1]
+  return [feesEarned1.add(fees0As1), totalFeesEarned0, totalFeesEarned1]
 }
 
-const getAPR = (poolData: any, sqrtPriceX96: BigNumber): APRType => {
+const getAPR = (poolData: any, sqrtPriceX96: BigNumber, currentFees0: BigNumber, currentFees1: BigNumber, lastBlock: string): APRType => {
   if (poolData.supplySnapshots.length == 0 || poolData.feeSnapshots.length == 0) {
     return {
       apr: 0,
@@ -189,14 +204,32 @@ const getAPR = (poolData: any, sqrtPriceX96: BigNumber): APRType => {
   }
   const snapshots = [...poolData.feeSnapshots].sort((a: any, b:any) => (a.block > b.block) ? 1: -1)
   const supplySnaps = [...poolData.supplySnapshots].sort((a: any, b: any) => (a.block > b.block) ? 1: -1)
-  const lastBlock = snapshots[snapshots.length-1].block
-  const [totalFeeValue, feesTotal0, feesTotal1] = computeTotalFeesEarned(snapshots, sqrtPriceX96)
-  const averageReserves = computeAverageReserves(supplySnaps, sqrtPriceX96, Number(poolData.lastTouchWithoutFees), lastBlock)
+  let firstBlock = (Number(lastBlock) - 40320*4).toString()
+  if (Number(firstBlock) < Number(poolData.lastTouchWithoutFees)) {
+    firstBlock = poolData.lastTouchWithoutFees
+  }
+  snapshots.push({
+    feesEarned0: currentFees0.toString(),
+    feesEarned1: currentFees1.toString(),
+    block: lastBlock
+  });
+  if (snapshots.length == 0 || supplySnaps.length == 0) {
+    return {
+      apr: 0,
+      feesEarned0: ethers.constants.Zero,
+      feesEarned1: ethers.constants.Zero,
+    }
+  }
+  const [totalFeeValue, feesTotal0, feesTotal1] = computeTotalFeesEarned(snapshots, sqrtPriceX96, Number(firstBlock))
+  let averageReserves = computeAverageReserves(supplySnaps, sqrtPriceX96, Number(firstBlock), Number(lastBlock))
+  if (averageReserves.eq(ethers.constants.Zero)) {
+    averageReserves = BigNumber.from(poolData.totalSupply)
+  }
   let averagePrincipal = averageReserves.sub(totalFeeValue)
   if (averagePrincipal.lt(ethers.constants.Zero)) {
     averagePrincipal = averageReserves
   }
-  const totalBlocks = Number(lastBlock) - Number(poolData.lastTouchWithoutFees)
+  const totalBlocks = Number(lastBlock) - Number(firstBlock)
   const apr = (Number(ethers.utils.formatEther(totalFeeValue)) * BLOCKS_PER_YEAR) / (Number(ethers.utils.formatEther(averagePrincipal)) * totalBlocks)
   return {
     apr: apr,
@@ -206,86 +239,95 @@ const getAPR = (poolData: any, sqrtPriceX96: BigNumber): APRType => {
 } 
 
 export const fetchPoolDetails = async (poolData: any, guniPool: Contract, token0: Contract, token1 : Contract, account : string|undefined|null) :Promise<PoolDetails|null> => {
-  if (guniPool && token0 && token1) {
-    let balancePool = ethers.constants.Zero;
-    let balance0 = ethers.constants.Zero;
-    let balance1 = ethers.constants.Zero;
-    let balanceEth = ethers.constants.Zero;
-    if (account) {
-      balancePool = await guniPool.balanceOf(account);
-      balance0 = await token0.balanceOf(account);
-      balance1 = await token1.balanceOf(account);
-      balanceEth = await guniPool.provider.getBalance(account);
+  try {
+    if (guniPool && token0 && token1) {
+      let balancePool = ethers.constants.Zero;
+      let balance0 = ethers.constants.Zero;
+      let balance1 = ethers.constants.Zero;
+      let balanceEth = ethers.constants.Zero;
+      if (account) {
+        balancePool = await guniPool.balanceOf(account);
+        balance0 = await token0.balanceOf(account);
+        balance1 = await token1.balanceOf(account);
+        balanceEth = await guniPool.provider.getBalance(account);
+      }
+      const name = await guniPool.name();
+      const gross = await guniPool.getUnderlyingBalances();
+      const supply = BigNumber.from(poolData.totalSupply);
+      const lowerTick = Number(poolData.lowerTick);
+      const upperTick = Number(poolData.upperTick);
+      const decimals0 = await token0.decimals();
+      const decimals1 = await token1.decimals();
+      const symbol0 = await token0.symbol();
+      const symbol1 = await token1.symbol();
+      let share0 = ethers.constants.Zero
+      let share1 = ethers.constants.Zero
+      if (supply.gt(ethers.constants.Zero)) {
+        share0 = gross[0].mul(balancePool).div(supply);
+        share1 = gross[1].mul(balancePool).div(supply);
+      }
+      const pool = new ethers.Contract(
+        ethers.utils.getAddress(poolData.uniswapPool),
+        ["function slot0() external view returns (uint160 sqrtPriceX96,int24,uint16,uint16,uint16,uint8,bool)", "function positions(bytes32) external view returns(uint128 _liquidity,uint256,uint256,uint128,uint128)"],
+        guniPool.provider
+      );
+      const {sqrtPriceX96} = await pool.slot0()
+      const helperContract = new ethers.Contract(
+        "0xFbd0B8D8016b9f908fC9652895c26C5a4994fE36",
+        ["function getAmountsForLiquidity(uint160,int24,int24,uint128) external pure returns(uint256 amount0, uint256 amount1)"],
+        guniPool.provider
+      );
+      const {_liquidity} = await pool.positions(poolData.positionId)
+      const {amount0: amount0Liquidity, amount1: amount1Liquidity} = await helperContract.getAmountsForLiquidity(sqrtPriceX96, poolData.lowerTick, poolData.upperTick, _liquidity)
+      const leftover0 = await token0.balanceOf(guniPool.address)
+      const leftover1 = await token1.balanceOf(guniPool.address)
+      const extraFees0 = gross[0].sub(amount0Liquidity).sub(leftover0)
+      const extraFees1 = gross[1].sub(amount1Liquidity).sub(leftover1)
+      const block = await pool.provider.getBlock('latest')
+      const {apr, feesEarned0, feesEarned1} = getAPR(
+        poolData,
+        sqrtPriceX96,
+        extraFees0,
+        extraFees1,
+        block.number.toString()
+      );
+      const factor = (10**decimals0)/(10**decimals1)
+      const lowerPrice = (1.0001**lowerTick)*factor
+      const upperPrice = (1.0001**upperTick)*factor
+      return {
+        name: name,
+        symbol: "G-UNI",
+        symbol0: symbol0,
+        symbol1: symbol1,
+        decimals: 18,
+        decimals0: Number(decimals0),
+        decimals1: Number(decimals1),
+        supply: supply,
+        supply0: gross[0],
+        supply1: gross[1],
+        balancePool: balancePool,
+        balance0: balance0,
+        balance1: balance1,
+        balanceEth: balanceEth,
+        share0: share0,
+        share1: share1,
+        apr: apr,
+        sqrtPriceX96: sqrtPriceX96,
+        lowerTick: lowerTick,
+        upperTick: upperTick,
+        manager: poolData.manager,
+        feesEarned0: feesEarned0,
+        feesEarned1: feesEarned1,
+        lowerPrice: lowerPrice,
+        upperPrice: upperPrice
+      }
     }
-    const name = await guniPool.name();
-    const gross = await guniPool.getUnderlyingBalances();
-    const supply = BigNumber.from(poolData.totalSupply);
-    const lowerTick = Number(poolData.lowerTick);
-    const upperTick = Number(poolData.upperTick);
-    const decimals0 = await token0.decimals();
-    const decimals1 = await token1.decimals();
-    const symbol0 = await token0.symbol();
-    const symbol1 = await token1.symbol();
-    let share0 = ethers.constants.Zero
-    let share1 = ethers.constants.Zero
-    if (supply.gt(ethers.constants.Zero)) {
-      share0 = gross[0].mul(balancePool).div(supply);
-      share1 = gross[1].mul(balancePool).div(supply);
-    }
-    const pool = new ethers.Contract(
-      ethers.utils.getAddress(poolData.uniswapPool),
-      ["function slot0() external view returns (uint160 sqrtPriceX96,int24,uint16,uint16,uint16,uint8,bool)", "function positions(bytes32) external view returns(uint128 _liquidity,uint256,uint256,uint128,uint128)"],
-      guniPool.provider
-    );
-    const {sqrtPriceX96} = await pool.slot0()
-    const helperContract = new ethers.Contract(
-      "0xFbd0B8D8016b9f908fC9652895c26C5a4994fE36",
-      ["function getAmountsForLiquidity(uint160,int24,int24,uint128) external pure returns(uint256 amount0, uint256 amount1)"],
-      guniPool.provider
-    );
-    const {_liquidity} = await pool.positions(poolData.positionId)
-    const {amount0: amount0Liquidity, amount1: amount1Liquidity} = await helperContract.getAmountsForLiquidity(sqrtPriceX96, poolData.lowerTick, poolData.upperTick, _liquidity)
-    const leftover0 = await token0.balanceOf(guniPool.address)
-    const leftover1 = await token1.balanceOf(guniPool.address)
-    const extraFees0 = gross[0].sub(amount0Liquidity).sub(leftover0)
-    const extraFees1 = gross[1].sub(amount1Liquidity).sub(leftover1)
-    const {apr, feesEarned0, feesEarned1} = getAPR(
-      poolData,
-      sqrtPriceX96
-    );
-    const factor = (10**decimals0)/(10**decimals1)
-    const lowerPrice = (1.0001**lowerTick)*factor
-    const upperPrice = (1.0001**upperTick)*factor
-    return {
-      name: name,
-      symbol: "G-UNI",
-      symbol0: symbol0,
-      symbol1: symbol1,
-      decimals: 18,
-      decimals0: Number(decimals0),
-      decimals1: Number(decimals1),
-      supply: supply,
-      supply0: gross[0],
-      supply1: gross[1],
-      balancePool: balancePool,
-      balance0: balance0,
-      balance1: balance1,
-      balanceEth: balanceEth,
-      share0: share0,
-      share1: share1,
-      apr: apr,
-      sqrtPriceX96: sqrtPriceX96,
-      lowerTick: lowerTick,
-      upperTick: upperTick,
-      manager: poolData.manager,
-      feesEarned0: feesEarned0.add(extraFees0),
-      feesEarned1: feesEarned1.add(extraFees1),
-      lowerPrice: lowerPrice,
-      upperPrice: upperPrice
-    }
+  
+    return null;
+  } catch (_e) {
+    return null;
   }
 
-  return null;
 }
 
 export default function PoolInfo(props: any) {
@@ -396,7 +438,7 @@ export default function PoolInfo(props: any) {
                 <strong>Total Fees Earned:</strong>{` ${Number(formatBigNumber(poolDetails.feesEarned0, poolDetails.decimals0, 4)).toLocaleString('en-US')} ${poolDetails.symbol0} + ${Number(formatBigNumber(poolDetails.feesEarned1, poolDetails.decimals1, 4)).toLocaleString('en-US')} ${poolDetails.symbol1}`}
               </p>
               <p>
-                <strong>Fees APR:</strong>{` ${poolDetails.apr > 0 ? `~${(poolDetails.apr*100).toFixed(2)}%` : 'TBD'}`}
+                <strong>Fees APR:</strong>{` ${poolDetails.apr ? `~${(poolDetails.apr*100).toFixed(2)}%` : 'TBD'}`}
               </p>
               <p>
                 <strong>Position Range:</strong>{` ${poolDetails.lowerPrice.toFixed(4)} ${poolDetails.symbol1} - ${poolDetails.upperPrice.toFixed(4)} ${poolDetails.symbol1}`}
@@ -419,7 +461,9 @@ export default function PoolInfo(props: any) {
           }
         </InnerBox>
       :
-        <></>
+        <InnerBox>
+          <TitleArea><Load>loading...</Load></TitleArea>
+        </InnerBox>
       }
       <br></br>
     </>
