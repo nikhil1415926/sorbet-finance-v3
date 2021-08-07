@@ -51,7 +51,7 @@ export const fetchPools = async () => {
     const data = await client.query({
       query: gql(obsQ)
     })
-    console.log(data.data.pools);
+    //console.log(data.data.pools);
     return data.data.pools;
   } catch(e) {
     console.log("error fetching pools for subgraph:", e)

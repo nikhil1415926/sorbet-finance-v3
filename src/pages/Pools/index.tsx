@@ -1,14 +1,11 @@
 //import { useGUniFactoryContract } from 'hooks/useContract'
-import React, {useEffect, useState} from 'react'
+import React, { useState, useEffect} from 'react'
 import styled from "styled-components";
-import { ApolloClient, InMemoryCache, gql } from '@apollo/client';
+import { PoolInfo as PoolInfoInterface } from '../../state/pool/reducer';
+import PoolInfo from '../../components/PoolInfo';
+import { usePool, fetchPools } from '../../state/pool/hooks';
 import { ButtonPink } from 'components/Button'
 import { useActiveWeb3React } from 'hooks/web3'
-import {ethers} from 'ethers';
-import { useTokenContract, useGUniPoolContract } from 'hooks/useContract';
-import { PoolInfo as PoolInfoInterface } from '../../state/pool/reducer';
-import PoolInfo, { fetchPoolDetails } from '../../components/PoolInfo';
-import { usePool, fetchPools } from '../../state/pool/hooks';
 
 export type PoolParam = {
   address: string;
@@ -59,13 +56,12 @@ const featuredPools = [
 ]
 
 export default function ListPools() {
+  const [poolsData, setPoolsData] = usePool();
+  // const [poolsData, setPoolsData] = useState<any[]>([]);
   const [featuredPoolsData, setFeaturedPoolsData] = useState<any[]>([]);
   const [showAll, setShowAll] = useState<boolean>(false);
   const { chainId } = useActiveWeb3React()
-  const [poolsData, setPoolsData] = usePool();
-  useEffect(() => {
-    fetchPools().then((result) => {
-      const allPools = result;
+  const createFeaturedPools = (allPools: Array<PoolInfoInterface>) => {
       const featured = [];
       const rest = [];
       for (let i=0; i<featuredPools.length; i++) {
@@ -78,7 +74,11 @@ export default function ListPools() {
         }
       }
       setFeaturedPoolsData(featured);
-      setPoolsData(rest);
+      setPoolsData(rest)
+  }
+  useEffect(() => {
+    fetchPools().then((result) => {
+      createFeaturedPools(result);
     });
   }, []);
   return (
@@ -106,9 +106,9 @@ export default function ListPools() {
           <Button onClick={() => setShowAll(!showAll)}>{showAll ? 'Show Less':'Show All'}</Button>
           <br></br>
         </Outer>
-        :
-          <></>
-        }
+      :
+        <></>
+      }
       </Box>
     :
       <p>WRONG NETWORK</p>

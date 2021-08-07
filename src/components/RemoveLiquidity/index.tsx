@@ -14,7 +14,8 @@ import TransactionConfirmationModal from 'components/TransactionConfirmationModa
 //import useUSDCPrice from 'hooks/useUSDCPrice'
 //import { useTranslation } from 'react-i18next'
 import { Area, Button, Row, Back, Input, MarginLeft } from '../AddLiquidity'
-import {Box, Title, fetchPools} from 'pages/Pools'
+import {Box, Title} from 'pages/Pools'
+import {fetchPools} from '../../state/pool/hooks'
 import '../AddLiquidity/toggle.css';
 import { ethers } from 'ethers';
 

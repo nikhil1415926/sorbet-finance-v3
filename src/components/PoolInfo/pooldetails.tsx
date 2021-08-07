@@ -4,7 +4,7 @@ import {ethers, Contract} from 'ethers'
 import { BigNumber } from '@ethersproject/bignumber'
 import { ButtonPink } from 'components/Button'
 import Loader from 'components/Loader'
-import { PoolDetails } from '.'
+import { PoolDetails, FiatValues } from '.'
 
 const DetailsBox = styled.div`
   margin-left: 1rem;
@@ -51,8 +51,9 @@ const formatBigNumber = (n: BigNumber, decimals: number, roundTo = 3): string =>
 interface PoolDetailProps {
   poolDetails: PoolDetails | null;
   guniPool: Contract |  null;
+  fiatValues: FiatValues | null;
 }
-export const PoolDetailComponent: React.FC<PoolDetailProps> = ({ poolDetails, guniPool }: PoolDetailProps) => {
+export const PoolDetailComponent: React.FC<PoolDetailProps> = ({ poolDetails, guniPool, fiatValues }: PoolDetailProps) => {
   return (
     <>
       {poolDetails ?
@@ -61,7 +62,7 @@ export const PoolDetailComponent: React.FC<PoolDetailProps> = ({ poolDetails, gu
               <strong>TVL:</strong>{` ${Number(formatBigNumber(poolDetails.supply0, poolDetails.decimals0, 2)).toLocaleString('en-US')} ${poolDetails.symbol0} + ${Number(formatBigNumber(poolDetails.supply1, poolDetails.decimals1, 2)).toLocaleString('en-US')} ${poolDetails.symbol1}`}
             </p>
             <p>
-              <strong>TVL ($):</strong>{` $${Number((Number(ethers.utils.formatUnits(poolDetails.supply0, poolDetails.decimals0.toString())) + Number(ethers.utils.formatUnits(poolDetails.supply1, poolDetails.decimals1.toString()))).toFixed(2)).toLocaleString('en-US')}`}
+              <strong>TVL ($):</strong>{fiatValues ? ` $${(Number(fiatValues.fiatTotal0) + Number(fiatValues.fiatTotal1)).toLocaleString('en-US')}` : ' $0'}
             </p>
             <p>
               <strong>Total Fees Earned:</strong>{` ${Number(formatBigNumber(poolDetails.feesEarned0, poolDetails.decimals0, 4)).toLocaleString('en-US')} ${poolDetails.symbol0} + ${Number(formatBigNumber(poolDetails.feesEarned1, poolDetails.decimals1, 4)).toLocaleString('en-US')} ${poolDetails.symbol1}`}
@@ -76,7 +77,7 @@ export const PoolDetailComponent: React.FC<PoolDetailProps> = ({ poolDetails, gu
               <strong>Your Share:</strong>{` ${Number(formatBigNumber(poolDetails.share0, poolDetails.decimals0, 2)).toLocaleString('en-US')} ${poolDetails.symbol0} + ${Number(formatBigNumber(poolDetails.share1, poolDetails.decimals1, 2)).toLocaleString('en-US')} ${poolDetails.symbol1}`}
             </p>
             <p>
-              <strong>Your Share ($):</strong>{` $${Number((Number(ethers.utils.formatUnits(poolDetails.share0, poolDetails.decimals0.toString())) + Number(ethers.utils.formatUnits(poolDetails.share1, poolDetails.decimals1.toString()))).toFixed(2)).toLocaleString('en-US')}`}
+              <strong>Your Share ($):</strong>{fiatValues ? ` $${(Number(fiatValues.fiatShare0) + Number(fiatValues.fiatShare1)).toLocaleString('en-US')}` : ' $0'}
             </p>
             <ButtonsArea>
               <ButtonMedium onClick={() => window.location.href = `/#/pools/add/${guniPool?.address}`}>Add Liquidity</ButtonMedium>

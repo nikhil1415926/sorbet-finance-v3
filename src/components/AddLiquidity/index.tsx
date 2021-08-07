@@ -21,7 +21,8 @@ import { ReactComponent as Plus } from 'assets/images/plus-blue.svg'
 import './toggle.css'
 import { ethers } from 'ethers'
 import { useUSDCValue } from 'hooks/useUSDCPrice'
-import {Box, Title, fetchPools} from 'pages/Pools'
+import {Box, Title} from 'pages/Pools'
+import {fetchPools} from '../../state/pool/hooks'
 
 export const Area = styled.div`
   display: flex;
