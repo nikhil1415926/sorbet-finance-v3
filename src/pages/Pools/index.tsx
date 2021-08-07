@@ -80,7 +80,7 @@ export default function ListPools() {
     fetchPools().then((result) => {
       createFeaturedPools(result);
     });
-  }, []);
+  });
   return (
     <>
     {Number(chainId) == 1 ?

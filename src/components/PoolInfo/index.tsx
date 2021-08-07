@@ -337,6 +337,69 @@ export const fetchPoolDetailsShort = async (guniPool: Contract, token0: Contract
   return null;
 }
 
+const getFiatValues = (details: any, currency0: any, currency1: any, fiatPrice0: any, fiatPrice1: any): FiatValues  => {
+  const currencyAmountTotal0 = tryParseAmount(ethers.utils.formatUnits(details.supply0, details.decimals0.toString()), currency0)
+  const currencyAmountShare0 = tryParseAmount(ethers.utils.formatUnits(details.share0, details.decimals0.toString()), currency0)
+  let fiatShare0 = '0'
+  let fiatShare1 = '0'
+  let fiatTotal0 = '0'
+  let fiatTotal1 = '0'
+  try {
+    if (currencyAmountShare0) {
+      if (details.symbol0 === "USDC") {
+        fiatShare0 = Number(ethers.utils.formatUnits(details.share0, details.decimals0.toString())).toFixed(4)
+      } else {
+        const share0 = fiatPrice0.quote(currencyAmountShare0)
+        fiatShare0 = share0 ? share0.toFixed(4) : '0'
+      }
+    }
+  } catch(_e) {
+    console.log("Share not exist 0")
+    fiatShare0 = '0'
+  }
+  if (currencyAmountTotal0) {
+    if (details.symbol0 === "USDC") {
+      fiatTotal0 =Number(ethers.utils.formatUnits(details.supply0, details.decimals0.toString())).toFixed(4)
+    } else {
+      const total0 = fiatPrice0.quote(currencyAmountTotal0)
+      fiatTotal0 = total0 ? total0.toFixed(4) : '0'
+    }
+  } else {
+    fiatTotal0 = '0'
+  }
+  const currencyAmountTotal1 = tryParseAmount(ethers.utils.formatUnits(details.supply1, details.decimals1.toString()), currency1)
+  const currencyAmountShare1 = tryParseAmount(ethers.utils.formatUnits(details.share1, details.decimals1.toString()), currency1)
+  try {
+    if (currencyAmountShare1) {
+      if (details.symbol1 === "USDC") {
+        fiatShare1 = Number(ethers.utils.formatUnits(details.share1, details.decimals1.toString())).toFixed(4)
+      } else {
+        const share1 = fiatPrice1.quote(currencyAmountShare1)
+        fiatShare1 = share1 ? share1.toFixed(4) : '0'
+      }
+    }
+  } catch(_e) {
+    console.log("Share not exist 1")
+    fiatShare1 = '0'
+  }
+  if (currencyAmountTotal1) {
+    if (details.symbol1 === "USDC") {
+      fiatTotal1 = Number(ethers.utils.formatUnits(details.supply1, details.decimals1.toString())).toFixed(4)
+    } else {
+      const total1 = fiatPrice1.quote(currencyAmountTotal1)
+      fiatTotal1 = total1 ? total1.toFixed(4) : '0'
+    }
+  } else {
+    fiatTotal1 = '0'
+  }
+  return {
+    fiatShare0: fiatShare0,
+    fiatShare1: fiatShare1,
+    fiatTotal0: fiatTotal0,
+    fiatTotal1: fiatTotal1
+  }
+}
+
 export default function PoolInfo(props: any) {
   const poolData = props.poolData;
   const guniPool = useGUniPoolContract(ethers.utils.getAddress(poolData.id));
@@ -345,7 +408,7 @@ export default function PoolInfo(props: any) {
   const [seeMore, setSeeMore] = useState<boolean>(false);
   const [seeMoreText, setSeeMoreText] = useState<string>('Show');
   const [fiatValues, setFiatValues] = useState<FiatValues|null>();
-  const {chainId, account} = useActiveWeb3React();
+  const {account} = useActiveWeb3React();
   const token0 = useTokenContract(ethers.utils.getAddress(poolData.token0));
   const token1 = useTokenContract(ethers.utils.getAddress(poolData.token1));
   const currency0 = useCurrency(ethers.utils.getAddress(poolData.token0));
@@ -377,81 +440,26 @@ export default function PoolInfo(props: any) {
       }
     }
     getPoolDetails();
-  }, [guniPool, token0, token1, chainId]);
+  }, [guniPool, token0, token1]);
   useEffect(() => {
-    if (inView && guniPool && token0 && token1 && fiatPrice0 && fiatPrice1) {
-      const start = Date.now();
-      fetchPoolDetails(poolData, guniPool, token0, token1, account).then((details) => {
-        setPoolDetailsLong(details);
-        const end = Date.now();
-        const duration = end - start;
-        console.log(`${guniPool.address} seconds elapsed long = ${Math.floor(duration / 1000)}s`);
-        if (currency0 && currency1 && details) {
-          const currencyAmountTotal0 = tryParseAmount(ethers.utils.formatUnits(details.supply0, details.decimals0.toString()), currency0)
-          const currencyAmountShare0 = tryParseAmount(ethers.utils.formatUnits(details.share0, details.decimals0.toString()), currency0)
-          let fiatShare0 = '0'
-          let fiatShare1 = '0'
-          let fiatTotal0 = '0'
-          let fiatTotal1 = '0'
-          try {
-            if (currencyAmountShare0) {
-              if (details.symbol0 === "USDC") {
-                fiatShare0 = Number(ethers.utils.formatUnits(details.share0, details.decimals0.toString())).toFixed(4)
-              } else {
-                const share0 = fiatPrice0.quote(currencyAmountShare0)
-                fiatShare0 = share0 ? share0.toFixed(4) : '0'
-              }
-            }
-          } catch(_e) {
-            console.log("Share not exist 0")
-            fiatShare0 = '0'
-          }
-          if (currencyAmountTotal0) {
-            if (details.symbol0 === "USDC") {
-              fiatTotal0 =Number(ethers.utils.formatUnits(details.supply0, details.decimals0.toString())).toFixed(4)
-            } else {
-              const total0 = fiatPrice0.quote(currencyAmountTotal0)
-              fiatTotal0 = total0 ? total0.toFixed(4) : '0'
-            }
-          } else {
-            fiatTotal0 = '0'
-          }
-          const currencyAmountTotal1 = tryParseAmount(ethers.utils.formatUnits(details.supply1, details.decimals1.toString()), currency1)
-          const currencyAmountShare1 = tryParseAmount(ethers.utils.formatUnits(details.share1, details.decimals1.toString()), currency1)
-          try {
-            if (currencyAmountShare1) {
-              if (details.symbol1 === "USDC") {
-                fiatShare1 = Number(ethers.utils.formatUnits(details.share1, details.decimals1.toString())).toFixed(4)
-              } else {
-                const share1 = fiatPrice1.quote(currencyAmountShare1)
-                fiatShare1 = share1 ? share1.toFixed(4) : '0'
-              }
-            }
-          } catch(_e) {
-            console.log("Share not exist 1")
-            fiatShare1 = '0'
-          }
-          if (currencyAmountTotal1) {
-            if (details.symbol1 === "USDC") {
-              fiatTotal1 = Number(ethers.utils.formatUnits(details.supply1, details.decimals1.toString())).toFixed(4)
-            } else {
-              const total1 = fiatPrice1.quote(currencyAmountTotal1)
-              fiatTotal1 = total1 ? total1.toFixed(4) : '0'
-            }
-          } else {
-            fiatTotal1 = '0'
-          }
-          const fiatValues = {
-            fiatShare0: fiatShare0,
-            fiatShare1: fiatShare1,
-            fiatTotal0: fiatTotal0,
-            fiatTotal1: fiatTotal1
-          } as FiatValues;
-          setFiatValues(fiatValues)
-        }
-      })
+    if (!(inView && guniPool && token0 && token1 && fiatPrice0 && fiatPrice1 && currency0 && currency1)) {
+      console.log("NOT ready to attempt fetch!", guniPool ? guniPool.address : '-');
+      return
+    } else {
+      console.log("ready to attempt fetch!", guniPool ? guniPool.address : '-');
     }
-  }, [inView, guniPool, token0, token1, account, chainId, poolData, fiatPrice0, fiatPrice1, currency0, currency1]);
+    const start = Date.now();
+    fetchPoolDetails(poolData, guniPool, token0, token1, account).then((details) => {
+      setPoolDetailsLong(details);
+      const end = Date.now();
+      const duration = end - start;
+      console.log(`${guniPool.address} seconds elapsed long = ${Math.floor(duration / 1000)}s`);
+      if (details) {
+        const fiatValues = getFiatValues(details, currency0, currency1, fiatPrice0, fiatPrice1)
+        setFiatValues(fiatValues)
+      }
+    })
+  }, [guniPool, token0, token1, account, currency0, currency1, fiatPrice0, fiatPrice1, inView, poolData]);
   return (
     <>
       {poolDetails ? 
