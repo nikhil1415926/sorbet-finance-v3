@@ -1,6 +1,7 @@
 import { configureStore } from '@reduxjs/toolkit'
 import { save, load } from 'redux-localstorage-simple'
 import user from './user/reducer'
+import pool from './pool/reducer'
 import application from './application/reducer'
 import { gelatoReducers, GELATO_PERSISTED_KEYS } from '@gelatonetwork/limit-orders-react'
 
@@ -10,6 +11,7 @@ const store = configureStore({
   reducer: {
     user,
     application,
+    pool,
     ...gelatoReducers,
   },
   middleware: [

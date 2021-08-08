@@ -10,7 +10,7 @@ import {
   useGUniPoolContract,
   useGUniResolverContract,
   useGUniRouterContract,
-  useUniswapV3Quoter,
+  useV3Quoter,
 } from 'hooks/useContract'
 import { tryParseAmount, useCurrency } from 'hooks/Tokens'
 import { WETH9 } from '@uniswap/sdk-core'
@@ -21,7 +21,8 @@ import { ReactComponent as Plus } from 'assets/images/plus-blue.svg'
 import './toggle.css'
 import { ethers } from 'ethers'
 import { useUSDCValue } from 'hooks/useUSDCPrice'
-import {Box, Title, fetchPools} from 'pages/Pools'
+import {Box, Title} from 'pages/Pools'
+import {fetchPools} from '../../state/pool/hooks'
 
 export const Area = styled.div`
   display: flex;
@@ -114,7 +115,7 @@ function AddLiquidityPanel(props: PoolParams) {
   const token1 = useTokenContract(props.token1)
 
   const guniResolver = useGUniResolverContract()
-  const quoter = useUniswapV3Quoter()
+  const quoter = useV3Quoter()
   const guniRouter = useGUniRouterContract()
 
   const eth = useCurrency('0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee')

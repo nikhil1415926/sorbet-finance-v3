@@ -13,10 +13,10 @@ import EIP_2612 from 'abis/eip_2612.json'
 import IGUniPoolABI from 'abis/guni-pool.json';
 import IGUniFactoryABI from 'abis/guni-factory.json';
 import IUniswapV3PoolABI from 'abis/uniswap-v3-pool.json';
-import IQuoterV2ABI from 'abis/quoter-v2.json';
 import IGUniResolverABI from 'abis/guni-resolver.json';
 import IGUniRouterABI from 'abis/guni-router.json';
 import { abi as IUniswapV2PairABI } from '@uniswap/v2-core/build/IUniswapV2Pair.json'
+import { abi as QuoterABI } from '@uniswap/v3-periphery/artifacts/contracts/lens/Quoter.sol/Quoter.json'
 import {
   ARGENT_WALLET_DETECTOR_ADDRESS,
   MULTICALL2_ADDRESSES,
@@ -112,8 +112,8 @@ export function useGUniRouterContract(): Contract | null {
   return useContract(GUNI_ROUTER_ADDRESSES, IGUniRouterABI, true)
 }
 
-export function useUniswapV3Quoter(): Contract | null {
-  return useContract(V3_QUOTER_ADDRESSES, IQuoterV2ABI, true);
+export function useV3Quoter(): Contract | null {
+  return useContract(V3_QUOTER_ADDRESSES, QuoterABI, true);
 }
 
 export function useMulticall2Contract() {

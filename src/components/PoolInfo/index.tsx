@@ -4,11 +4,14 @@ import { useActiveWeb3React } from 'hooks/web3';
 import {ethers} from 'ethers';
 import { Contract } from '@ethersproject/contracts'
 import { BigNumber } from '@ethersproject/bignumber'
+import { useInView } from 'react-intersection-observer'
 import styled from "styled-components";
 import { tryParseAmount, useCurrency } from 'hooks/Tokens'
 import useUSDCPrice from 'hooks/useUSDCPrice'
 import DoubleCurrencyLogo from 'components/DoubleLogo'
 import { ButtonPink } from 'components/Button'
+import { PoolDetailComponent } from './pooldetails'
+import Loader from 'components/Loader'
 
 export type PoolTokens = {
   token0: string
@@ -49,6 +52,19 @@ export type PoolDetails = {
   upperPrice: number
 }
 
+export type FiatValues = {
+  fiatShare0: string;
+  fiatShare1: string;
+  fiatTotal0: string;
+  fiatTotal1: string;
+}
+
+type PoolDetailsShort = {
+  symbol: string
+  symbol0: string
+  symbol1: string
+}
+
 type APRType = {
   apr: number
   feesEarned0: BigNumber
@@ -70,19 +86,12 @@ export const formatBigNumber = (n: BigNumber, decimals: number, roundTo = 3): st
 }
 
 const ButtonSmall = styled(ButtonPink)`
-  width: 15%;
+  width: 5vw;
   margin-right: 1rem;
   padding-top: 0.03rem;
   padding-bottom: 0.03rem;
   @media only screen and (max-width: 500px) {
     width: 20%;
-  }
-`;
-
-const ButtonMedium = styled(ButtonPink)`
-  width: 40%;
-  @media only screen and (max-width: 500px) {
-    width: 33%;
   }
 `;
 
@@ -102,13 +111,6 @@ const TitleArea = styled.div`
   align-items: center;
 `;
 
-const ButtonsArea = styled.div`
-  display: flex;
-  flex-direction: row;
-  justify-content: center;
-  align-items: center;
-`;
-
 const Title = styled.p`
   margin-left: 1rem;
   font-weight: 800;
@@ -118,7 +120,7 @@ const Title = styled.p`
   }
 `;
 
-export const LogoWrapper = styled.p`
+export const LogoWrapper = styled.div`
   margin-left: 1rem;
   @media only screen and (max-width: 500px) {
     margin-left: 0.5rem;
@@ -132,9 +134,12 @@ const LeftTitle = styled(Title)`
   }
 `;
 
-export const DetailsBox = styled.div`
-  margin-left: 1rem;
-`;
+const ShowMoreLoader = styled(Loader)`
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+`
 
 const Load = styled.p`
   text-align: center;
@@ -145,15 +150,15 @@ const Load = styled.p`
 const X96 = BigNumber.from(2).pow(BigNumber.from(96))
 const BLOCKS_PER_YEAR = 2102400
 
-const computeAverageReserves = (snapshots: any, sqrtPriceX96: BigNumber, firstBlock: number, lastBlock: number) => {
+const computeAverageReserves = (snapshots: any, firstBlock: number, lastBlock: number) => {
   let cumulativeBlocks = BigNumber.from(0)
   let cumulativeReserves = BigNumber.from(0)
-  const priceX96X96 = sqrtPriceX96.mul(sqrtPriceX96)
   for (let i=1; i<snapshots.length+1; i++) {
-    if (Number(snapshots[i-1].block) <= lastBlock) {
+    if (Number(snapshots[i-1].block) < lastBlock) {
       if (i == snapshots.length || Number(snapshots[i].block) > firstBlock) {
         const reserves0 = BigNumber.from(snapshots[i-1].reserves0)
         const reserves1 = BigNumber.from(snapshots[i-1].reserves1)
+        const priceX96X96 = BigNumber.from(snapshots[i-1].sqrtPriceX96).mul(BigNumber.from(snapshots[i-1].sqrtPriceX96))
         const reserves0As1X96 = reserves0.mul(priceX96X96).div(X96)
         const reserves0As1 = reserves0As1X96.div(X96)
         const reserves = reserves1.add(reserves0As1)
@@ -221,26 +226,27 @@ const getAPR = (poolData: any, sqrtPriceX96: BigNumber, currentFees0: BigNumber,
     }
   }
   const [totalFeeValue, feesTotal0, feesTotal1] = computeTotalFeesEarned(snapshots, sqrtPriceX96, Number(firstBlock))
-  let averageReserves = computeAverageReserves(supplySnaps, sqrtPriceX96, Number(firstBlock), Number(lastBlock))
-  if (averageReserves.eq(ethers.constants.Zero)) {
-    averageReserves = BigNumber.from(poolData.totalSupply)
+  const averageReserves = computeAverageReserves(supplySnaps, Number(firstBlock), Number(lastBlock))
+  let apr = 0
+  if (averageReserves.gt(ethers.constants.Zero)) {
+    let averagePrincipal = averageReserves.sub(totalFeeValue)
+    if (averagePrincipal.lte(ethers.constants.Zero)) {
+      averagePrincipal = averageReserves
+    }
+    const totalBlocks = Number(lastBlock) - Number(firstBlock)
+    apr = (Number(ethers.utils.formatEther(totalFeeValue)) * BLOCKS_PER_YEAR) / (Number(ethers.utils.formatEther(averagePrincipal)) * totalBlocks)
   }
-  let averagePrincipal = averageReserves.sub(totalFeeValue)
-  if (averagePrincipal.lt(ethers.constants.Zero)) {
-    averagePrincipal = averageReserves
-  }
-  const totalBlocks = Number(lastBlock) - Number(firstBlock)
-  const apr = (Number(ethers.utils.formatEther(totalFeeValue)) * BLOCKS_PER_YEAR) / (Number(ethers.utils.formatEther(averagePrincipal)) * totalBlocks)
   return {
     apr: apr,
     feesEarned0: feesTotal0,
     feesEarned1: feesTotal1
   }
-} 
+}
 
 export const fetchPoolDetails = async (poolData: any, guniPool: Contract, token0: Contract, token1 : Contract, account : string|undefined|null) :Promise<PoolDetails|null> => {
-  try {
-    if (guniPool && token0 && token1) {
+  if (guniPool && token0 && token1 && poolData) {
+    console.log(`fetching pool details (${guniPool.address})...`)
+    try {
       let balancePool = ethers.constants.Zero;
       let balance0 = ethers.constants.Zero;
       let balance1 = ethers.constants.Zero;
@@ -294,6 +300,7 @@ export const fetchPoolDetails = async (poolData: any, guniPool: Contract, token0
       const factor = (10**decimals0)/(10**decimals1)
       const lowerPrice = (1.0001**lowerTick)*factor
       const upperPrice = (1.0001**upperTick)*factor
+      console.log(`pool details COMPLETE (${guniPool.address})`)
       return {
         name: name,
         symbol: "G-UNI",
@@ -321,32 +328,109 @@ export const fetchPoolDetails = async (poolData: any, guniPool: Contract, token0
         lowerPrice: lowerPrice,
         upperPrice: upperPrice
       }
+    } catch (_e) {
+      console.log(`error fetching pool details ${poolData.address}`)
     }
-  
-    return null;
-  } catch (_e) {
-    return null;
   }
 
+  return null;
+}
+
+export const fetchPoolDetailsShort = async (guniPool: Contract, token0: Contract, token1 : Contract) :Promise<PoolDetailsShort|null> => {
+  if (guniPool && token0 && token1) {
+    const symbol0 = await token0.symbol();
+    const symbol1 = await token1.symbol();
+    return {
+      symbol: "G-UNI",
+      symbol0: symbol0,
+      symbol1: symbol1,
+    }
+  }
+  return null;
+}
+
+const getFiatValues = (details: any, currency0: any, currency1: any, fiatPrice0: any, fiatPrice1: any): FiatValues  => {
+  const currencyAmountTotal0 = tryParseAmount(ethers.utils.formatUnits(details.supply0, details.decimals0.toString()), currency0)
+  const currencyAmountShare0 = tryParseAmount(ethers.utils.formatUnits(details.share0, details.decimals0.toString()), currency0)
+  let fiatShare0 = '0'
+  let fiatShare1 = '0'
+  let fiatTotal0 = '0'
+  let fiatTotal1 = '0'
+  try {
+    if (currencyAmountShare0) {
+      if (details.symbol0 === "USDC") {
+        fiatShare0 = Number(ethers.utils.formatUnits(details.share0, details.decimals0.toString())).toFixed(4)
+      } else {
+        const share0 = fiatPrice0.quote(currencyAmountShare0)
+        fiatShare0 = share0 ? share0.toFixed(4) : '0'
+      }
+    }
+  } catch(_e) {
+    console.log("Share not exist 0")
+    fiatShare0 = '0'
+  }
+  if (currencyAmountTotal0) {
+    if (details.symbol0 === "USDC") {
+      fiatTotal0 =Number(ethers.utils.formatUnits(details.supply0, details.decimals0.toString())).toFixed(4)
+    } else {
+      const total0 = fiatPrice0.quote(currencyAmountTotal0)
+      fiatTotal0 = total0 ? total0.toFixed(4) : '0'
+    }
+  } else {
+    fiatTotal0 = '0'
+  }
+  const currencyAmountTotal1 = tryParseAmount(ethers.utils.formatUnits(details.supply1, details.decimals1.toString()), currency1)
+  const currencyAmountShare1 = tryParseAmount(ethers.utils.formatUnits(details.share1, details.decimals1.toString()), currency1)
+  try {
+    if (currencyAmountShare1) {
+      if (details.symbol1 === "USDC") {
+        fiatShare1 = Number(ethers.utils.formatUnits(details.share1, details.decimals1.toString())).toFixed(4)
+      } else {
+        const share1 = fiatPrice1.quote(currencyAmountShare1)
+        fiatShare1 = share1 ? share1.toFixed(4) : '0'
+      }
+    }
+  } catch(_e) {
+    console.log("Share not exist 1")
+    fiatShare1 = '0'
+  }
+  if (currencyAmountTotal1) {
+    if (details.symbol1 === "USDC") {
+      fiatTotal1 = Number(ethers.utils.formatUnits(details.supply1, details.decimals1.toString())).toFixed(4)
+    } else {
+      const total1 = fiatPrice1.quote(currencyAmountTotal1)
+      fiatTotal1 = total1 ? total1.toFixed(4) : '0'
+    }
+  } else {
+    fiatTotal1 = '0'
+  }
+  return {
+    fiatShare0: fiatShare0,
+    fiatShare1: fiatShare1,
+    fiatTotal0: fiatTotal0,
+    fiatTotal1: fiatTotal1
+  }
 }
 
 export default function PoolInfo(props: any) {
   const poolData = props.poolData;
   const guniPool = useGUniPoolContract(ethers.utils.getAddress(poolData.id));
-  const [poolDetails, setPoolDetails] = useState<PoolDetails|null>(null);
+  const [poolDetails, setPoolDetails] = useState<PoolDetailsShort|null>(null);
+  const [poolDetailsLong, setPoolDetailsLong] = useState<PoolDetails|null>(null);
   const [seeMore, setSeeMore] = useState<boolean>(false);
+  const [fetchingPool, setFetchingPool] = useState<boolean>(false);
   const [seeMoreText, setSeeMoreText] = useState<string>('Show');
-  const [fiatShare0, setFiatShare0] = useState<string|null>();
-  const [fiatShare1, setFiatShare1] = useState<string|null>();
-  const [fiatTotal0, setFiatTotal0] = useState<string|null>();
-  const [fiatTotal1, setFiatTotal1] = useState<string|null>();
-  const {chainId, account} = useActiveWeb3React();
+  const [fiatValues, setFiatValues] = useState<FiatValues|null>(null);
+  const {account} = useActiveWeb3React();
   const token0 = useTokenContract(ethers.utils.getAddress(poolData.token0));
   const token1 = useTokenContract(ethers.utils.getAddress(poolData.token1));
   const currency0 = useCurrency(ethers.utils.getAddress(poolData.token0));
   const currency1 = useCurrency(ethers.utils.getAddress(poolData.token1));
   const fiatPrice0 = useUSDCPrice(currency0 ?? undefined);
   const fiatPrice1 = useUSDCPrice(currency1 ?? undefined);
+  const [ref, inView] = useInView({
+    threshold: 0,
+  })
   const handleSeeMore = () => {
     if (!seeMore) {
       setSeeMore(true);
@@ -359,106 +443,39 @@ export default function PoolInfo(props: any) {
   useEffect(() => {
     const getPoolDetails = async () => {
       if (guniPool && token0 && token1) {
-        const details = await fetchPoolDetails(poolData, guniPool, token0, token1, account);
-        setPoolDetails(details);
-        if (currency0 && currency1 && details) {
-          const currencyAmountTotal0 = tryParseAmount(ethers.utils.formatUnits(details.supply0, details.decimals0.toString()), currency0)
-          const currencyAmountShare0 = tryParseAmount(ethers.utils.formatUnits(details.share0, details.decimals0.toString()), currency0)
-          try {
-            if (currencyAmountShare0) {
-              if (details.symbol0 === "USDC") {
-                setFiatShare0(Number(ethers.utils.formatUnits(details.share0, details.decimals0.toString())).toFixed(4))
-              } else {
-                const share0 = fiatPrice0?.quote(currencyAmountShare0)
-                setFiatShare0(share0 ? share0.toFixed(4) : '0')
-              }
-            }
-          } catch(_e) {
-            console.log("Share not exist 0")
-            setFiatShare0('0')
-          }
-          if (currencyAmountTotal0) {
-            if (details.symbol0 === "USDC") {
-              setFiatTotal0(Number(ethers.utils.formatUnits(details.supply0, details.decimals0.toString())).toFixed(4))
-            } else {
-              const total0 = fiatPrice0?.quote(currencyAmountTotal0)
-              setFiatTotal0(total0 ? total0.toFixed(4) : '0')
-            }
-          } else {
-            setFiatTotal0('0')
-          }
-          const currencyAmountTotal1 = tryParseAmount(ethers.utils.formatUnits(details.supply1, details.decimals1.toString()), currency1)
-          const currencyAmountShare1 = tryParseAmount(ethers.utils.formatUnits(details.share1, details.decimals1.toString()), currency1)
-          try {
-            if (currencyAmountShare1) {
-              if (details.symbol1 === "USDC") {
-                setFiatShare1(Number(ethers.utils.formatUnits(details.share1, details.decimals1.toString())).toFixed(4))
-              } else {
-                const share1 = fiatPrice1?.quote(currencyAmountShare1)
-                setFiatShare1(share1 ? share1.toFixed(4) : '0')
-              }
-            }
-          } catch(_e) {
-            console.log("Share not exist 1")
-            setFiatShare1('0')
-          }
-          if (currencyAmountTotal1) {
-            if (details.symbol1 === "USDC") {
-              setFiatTotal1(Number(ethers.utils.formatUnits(details.supply1, details.decimals1.toString())).toFixed(4))
-            } else {
-              const total1 = fiatPrice1?.quote(currencyAmountTotal1)
-              setFiatTotal1(total1 ? total1.toFixed(4) : '0')
-            }
-          } else {
-            setFiatTotal1('0')
-          }
-        }
+        fetchPoolDetailsShort(guniPool, token0, token1).then((result) => {
+          setPoolDetails(result);
+        })
       }
     }
     getPoolDetails();
-  }, [guniPool, token0, token1, account, chainId, poolData, fiatPrice0, fiatPrice1, currency0, currency1]);
+  }, [guniPool, token0, token1]);
+  useEffect(() => {
+    if (inView && !fetchingPool && guniPool && token0 && token1 && currency0 && currency1 && fiatPrice0 && fiatPrice1 && poolDetails != null && poolDetailsLong == null) {
+      setFetchingPool(true);
+      fetchPoolDetails(poolData, guniPool, token0, token1, account).then((details) => {
+        setPoolDetailsLong(details);
+        if (details) {
+          const fiatValues = getFiatValues(details, currency0, currency1, fiatPrice0, fiatPrice1)
+          setFiatValues(fiatValues)
+          setFetchingPool(false);
+        }
+      })
+    }
+  }, [inView, guniPool, token0, token1, account, poolData, fiatPrice0, fiatPrice1, currency0, currency1, poolDetails, poolDetailsLong, fetchingPool])
+
   return (
     <>
       {poolDetails ? 
-        <InnerBox>
+        <InnerBox ref={ref}>
           <TitleArea>
-            <LogoWrapper><DoubleCurrencyLogo currency0={currency1 ? currency1 : undefined} currency1={currency0 ? currency0 : undefined} size={36} margin={true} /></LogoWrapper>
+            <LogoWrapper>
+              <DoubleCurrencyLogo currency0={currency1 ? currency1 : undefined} currency1={currency0 ? currency0 : undefined} size={36} margin={true} />
+            </LogoWrapper>
             <LeftTitle>{`${poolDetails.symbol0}/${poolDetails.symbol1} LP`}</LeftTitle>
-            <ButtonSmall onClick={() => handleSeeMore()}>{seeMoreText}</ButtonSmall>
+            <ButtonSmall onClick={() => handleSeeMore()} disabled={poolDetailsLong ? false : true}>{poolDetailsLong ? seeMoreText : <ShowMoreLoader stroke="white"/>}</ButtonSmall>
           </TitleArea>
-          {seeMore ?
-            <DetailsBox>
-              <p>
-                <strong>TVL:</strong>{` ${Number(formatBigNumber(poolDetails.supply0, poolDetails.decimals0, 2)).toLocaleString('en-US')} ${poolDetails.symbol0} + ${Number(formatBigNumber(poolDetails.supply1, poolDetails.decimals1, 2)).toLocaleString('en-US')} ${poolDetails.symbol1}`}
-              </p>
-              <p>
-                <strong>TVL ($):</strong>{fiatTotal0 && fiatTotal1 ? ` $${(Number(fiatTotal0) + Number(fiatTotal1)).toLocaleString('en-US')}`: ' ??'}
-              </p>
-              <p>
-                <strong>Total Fees Earned:</strong>{` ${Number(formatBigNumber(poolDetails.feesEarned0, poolDetails.decimals0, 4)).toLocaleString('en-US')} ${poolDetails.symbol0} + ${Number(formatBigNumber(poolDetails.feesEarned1, poolDetails.decimals1, 4)).toLocaleString('en-US')} ${poolDetails.symbol1}`}
-              </p>
-              <p>
-                <strong>Fees APR:</strong>{` ${poolDetails.apr ? `~${(poolDetails.apr*100).toFixed(2)}%` : 'TBD'}`}
-              </p>
-              <p>
-                <strong>Position Range:</strong>{` ${poolDetails.lowerPrice.toFixed(4)} ${poolDetails.symbol1} - ${poolDetails.upperPrice.toFixed(4)} ${poolDetails.symbol1}`}
-              </p>
-              <p>
-                <strong>Your Share:</strong>{` ${Number(formatBigNumber(poolDetails.share0, poolDetails.decimals0, 2)).toLocaleString('en-US')} ${poolDetails.symbol0} + ${Number(formatBigNumber(poolDetails.share1, poolDetails.decimals1, 2)).toLocaleString('en-US')} ${poolDetails.symbol1}`}
-              </p>
-              <p>
-                <strong>Your Share ($):</strong>{fiatShare0 && fiatShare1 ? ` $${(Number(fiatShare0) + Number(fiatShare1)).toLocaleString('en-US')}`: ' ??'}
-              </p>
-              <ButtonsArea>
-                <ButtonMedium onClick={() => window.location.href = `/#/pools/add/${guniPool?.address}`}>Add Liquidity</ButtonMedium>
-                &nbsp;&nbsp;&nbsp;&nbsp;
-                <ButtonMedium onClick={() => window.location.href = `/#/pools/remove/${guniPool?.address}`}>Remove Liquidity</ButtonMedium>
-              </ButtonsArea>
-              <br></br>
-            </DetailsBox>
-          :
-            <></>
-          }
+          { seeMore ? <PoolDetailComponent guniPool={guniPool} poolDetails={poolDetailsLong} fiatValues={fiatValues} /> : <></> }
         </InnerBox>
       :
         <InnerBox>
@@ -469,26 +486,3 @@ export default function PoolInfo(props: any) {
     </>
   )
 }
-
-/*export default function PoolInfo(props: AddressParam) {
-  const [poolTokens, setPoolTokens] = useState<PoolTokens|null>(null);
-  const [pool, setPool] = useState<Contract>();
-  const {chainId} = useActiveWeb3React();
-  const guniPool = useGUniPoolContract(props.address);
-  useEffect(() => {
-    const getPoolInfo = async () => {
-      if (guniPool) {
-        const token0 = await guniPool.token0();
-        const token1 = await guniPool.token1();
-        setPoolTokens({token0: token0, token1: token1});
-        setPool(guniPool);
-      }
-    }
-    getPoolInfo();
-  }, [guniPool, chainId]);
-  return (
-    <>
-      {pool && poolTokens ? <><PoolDetails pool={pool} token0={poolTokens.token0} token1={poolTokens.token1} /><br></br></> : <></>}
-    </>
-  )
-}*/

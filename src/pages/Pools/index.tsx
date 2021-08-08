@@ -1,10 +1,12 @@
 //import { useGUniFactoryContract } from 'hooks/useContract'
-import React, {useState, useEffect} from 'react'
-import PoolInfo from '../../components/PoolInfo';
+import React, { useState, useEffect} from 'react'
 import styled from "styled-components";
-import { ApolloClient, InMemoryCache, gql } from '@apollo/client';
+import { PoolInfo as PoolInfoInterface } from '../../state/pool/reducer';
+import PoolInfo from '../../components/PoolInfo';
+import { usePool } from '../../state/pool/hooks';
 import { ButtonPink } from 'components/Button'
 import { useActiveWeb3React } from 'hooks/web3'
+import {fetchPools} from '../../state/pool/hooks'
 
 export type PoolParam = {
   address: string;
@@ -48,59 +50,6 @@ const Outer = styled.div`
   flex-direction: column;
 `
 
-export const fetchPools = async () => {
-  try {
-    const APIURL = "https://api.thegraph.com/subgraphs/name/gelatodigital/g-uni";
-
-    const obsQ = `
-      query {
-        pools {
-          id
-          blockCreated
-          manager
-          address
-          uniswapPool
-          positionId
-          token0
-          token1
-          feeTier
-          liquidity
-          lowerTick
-          upperTick
-          totalSupply
-          managerFee
-          lastTouchWithoutFees
-          supplySnapshots {
-            id
-            block
-            reserves0
-            reserves1
-          }
-          feeSnapshots {
-            id
-            block
-            feesEarned0
-            feesEarned1
-          }
-        }
-      }
-    `;
-    
-    const client = new ApolloClient({
-      uri: APIURL,
-      cache: new InMemoryCache()
-    });
-    
-    const data = await client.query({
-      query: gql(obsQ)
-    })
-    return data.data.pools;
-  } catch(e) {
-    console.log("error fetching pools for subgraph:", e)
-    return []
-  }
-}
-
 const featuredPools = [
   '0xAbDDAfB225e10B90D798bB8A886238Fb835e2053'.toLowerCase(),
   '0x4f38892c16bfbB4f4f7424EEfAa9767F4E922073'.toLowerCase(),
@@ -108,13 +57,13 @@ const featuredPools = [
 ]
 
 export default function ListPools() {
-  const [poolsData, setPoolsData] = useState<any[]>([]);
+  const [poolsData, setPoolsData] = usePool();
+  // const [poolsData, setPoolsData] = useState<any[]>([]);
   const [featuredPoolsData, setFeaturedPoolsData] = useState<any[]>([]);
   const [showAll, setShowAll] = useState<boolean>(false);
   const { chainId } = useActiveWeb3React()
   useEffect(() => {
-    fetchPools().then((result) => {
-      const allPools = result;
+    const createFeaturedPools = (allPools: Array<PoolInfoInterface>) => {
       const featured = [];
       const rest = [];
       for (let i=0; i<featuredPools.length; i++) {
@@ -127,9 +76,14 @@ export default function ListPools() {
         }
       }
       setFeaturedPoolsData(featured);
-      setPoolsData(rest);
+    }
+    console.log("fetching pools...")
+    fetchPools().then((result) => {
+      const data = [...result];
+      createFeaturedPools([...result]);
+      setPoolsData(data);
     });
-  }, []);
+  }, [setPoolsData]);
   return (
     <>
     {Number(chainId) == 1 ?
@@ -145,7 +99,11 @@ export default function ListPools() {
           {showAll ?
             <List>
             {poolsData.map(function(poolData, index){
-              return <PoolInfo key={index} poolData={poolData} />;
+              if (!featuredPools.includes(poolData.address.toLowerCase())) {
+                return <PoolInfo key={index} poolData={poolData} />;
+              } else {
+                return <p key={index}></p>
+              }
             })}
             </List>
           :
