@@ -422,10 +422,10 @@ export default function PoolInfo(props: any) {
   const [seeMoreText, setSeeMoreText] = useState<string>('Show');
   const [fiatValues, setFiatValues] = useState<FiatValues|null>(null);
   const {account} = useActiveWeb3React();
-  const token0 = useTokenContract(ethers.utils.getAddress(poolData.token0));
-  const token1 = useTokenContract(ethers.utils.getAddress(poolData.token1));
-  const currency0 = useCurrency(ethers.utils.getAddress(poolData.token0));
-  const currency1 = useCurrency(ethers.utils.getAddress(poolData.token1));
+  const token0 = useTokenContract(ethers.utils.getAddress(poolData.token0.address));
+  const token1 = useTokenContract(ethers.utils.getAddress(poolData.token1.address));
+  const currency0 = useCurrency(ethers.utils.getAddress(poolData.token0.address));
+  const currency1 = useCurrency(ethers.utils.getAddress(poolData.token1.address));
   const fiatPrice0 = useUSDCPrice(currency0 ?? undefined);
   const fiatPrice1 = useUSDCPrice(currency1 ?? undefined);
   const [ref, inView] = useInView({

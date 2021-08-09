@@ -18,8 +18,12 @@ export const fetchPools = async () => {
           address
           uniswapPool
           positionId
-          token0
-          token1
+          token0 {
+            address
+          }
+          token1 {
+            address
+          }
           feeTier
           liquidity
           lowerTick
